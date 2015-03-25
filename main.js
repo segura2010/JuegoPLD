@@ -22,6 +22,7 @@ var mainState = {
     create: function() { 
         
         game.physics.startSystem(Phaser.Physics.P2JS);
+        game.physics.p2.restitution = 0.5;
 
         this.principalPlayer = game.add.sprite(200, 200, "principalPlayer");
         game.physics.p2.enable(this.principalPlayer);
@@ -58,7 +59,7 @@ var mainState = {
         this.upperLocalLimit.body.immovable = true;
         this.lowerLocalLimit = this.createCircle(0, (GAMESIZE[1]/2)-(this.localPorteria.height/2)-5, 7, 0xFAFAFA);
         this.lowerLocalLimit.body.immovable = true;
-        game.physics.p2.enable(this.localPorteria);
+        //game.physics.p2.enable(this.localPorteria);
 
         this.visitantPorteria = this.game.add.sprite(GAMESIZE[0]-5, GAMESIZE[1]/2, 'porteria');
         this.visitantPorteria.height = 100;
@@ -66,7 +67,7 @@ var mainState = {
         this.upperVisitantLimit.body.immovable = true;
         this.lowerVisitantLimit = this.createCircle(GAMESIZE[0]-4, (GAMESIZE[1]/2)-(this.localPorteria.height/2)-5, 7, 0xFAFAFA);
         this.lowerVisitantLimit.body.immovable = true;
-        game.physics.p2.enable(this.visitantPorteria);
+        //game.physics.p2.enable(this.visitantPorteria);
         
 
  
@@ -107,6 +108,7 @@ var mainState = {
         //game.physics.p2.overlap(this.ball, this.visitantPorteria, this.localGoal, null, this); 
         //game.physics.p2.overlap(this.ball, this.localPorteria, this.visitantGoal, null, this); 
 
+        /*
         game.physics.p2.collide(this.ball, this.principalPlayer);
 
         game.physics.p2.collide(this.upperLocalLimit, this.ball);
@@ -114,6 +116,7 @@ var mainState = {
 
         game.physics.p2.collide(this.upperVisitantLimit, this.ball);
         game.physics.p2.collide(this.lowerVisitantLimit, this.ball);
+        */
 
         /* Slowly rotate the bird downward, up to a certain point.
         if (this.bird.angle < 20)
@@ -211,7 +214,8 @@ var mainState = {
         this.ball.body.velocity.x = 0;
     },
     addAcceleration: function() {
-        var MAXVEL = 200;
+        // http://jsfiddle.net/sh036s95/
+        var MAXVEL = 100; 
         /*
         this.vy = this.principalPlayer.body.velocity.y;
         this.vx = this.principalPlayer.body.velocity.x;
@@ -235,7 +239,7 @@ var mainState = {
 
         if(this.leftKey.isDown && this.vx > -MAXVEL)
         {   this.vx += -10;
-            this.principalPlayer.body.velocity.y = this.vy;
+            this.principalPlayer.body.velocity.x += this.vx;
         }
         else if(this.rigthKey.isDown && this.vx < MAXVEL)
         {   this.vx += 10;
@@ -249,6 +253,7 @@ var mainState = {
         {   this.vx += 10;
             this.principalPlayer.body.velocity.x += this.vx;
         }
+        console.log(this.vx+":"+this.vy)
     },
     kickBall: function(ball, player) {
         this.ball.body.velocity = player.body.velocity;
