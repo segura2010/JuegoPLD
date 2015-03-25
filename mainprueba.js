@@ -9,10 +9,10 @@ var mainState = {
         game.stage.backgroundColor = '#04B404';
 
         // Load images
-        game.load.image('principalPlayer', 'assets/player.png');  
+        game.load.image('principalPlayer', 'assets/granada.png');  
         game.load.image('otherPlayers', 'assets/pipe.png'); 
-        game.load.image('porteria', 'assets/pipe.png');
-        game.load.image('ball', 'assets/pipe.png'); 
+        game.load.image('porteria', 'assets/pipe.png'); 
+        game.load.image('ball', 'assets/player.png'); 
 
         // Load sounds
         game.load.audio('goal', 'assets/jump.wav');
@@ -20,7 +20,7 @@ var mainState = {
     },
 
     create: function() { 
-        
+        //game.physics.startSystem(Phaser.Physics.NINJA);
         game.physics.startSystem(Phaser.Physics.P2JS);
 
         this.principalPlayer = game.add.sprite(200, 200, "principalPlayer");
@@ -47,78 +47,13 @@ var mainState = {
         this.rigthKey = this.game.input.keyboard.addKey(Phaser.Keyboard.RIGHT);
         this.leftKey = this.game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
 
-        // Principal Player velocity
         this.vx = 0;
         this.vy = 0;
-
-        // Porterias creation
-        this.localPorteria = this.game.add.sprite(-45, GAMESIZE[1]/2, 'porteria');
-        this.localPorteria.height = 100;
-        this.upperLocalLimit = this.createCircle(0, (GAMESIZE[1]/2)+(this.localPorteria.height/2)-5, 7, 0xFAFAFA);
-        this.upperLocalLimit.body.immovable = true;
-        this.lowerLocalLimit = this.createCircle(0, (GAMESIZE[1]/2)-(this.localPorteria.height/2)-5, 7, 0xFAFAFA);
-        this.lowerLocalLimit.body.immovable = true;
-        game.physics.p2.enable(this.localPorteria);
-
-        this.visitantPorteria = this.game.add.sprite(GAMESIZE[0]-5, GAMESIZE[1]/2, 'porteria');
-        this.visitantPorteria.height = 100;
-        this.upperVisitantLimit = this.createCircle(GAMESIZE[0]-4, (GAMESIZE[1]/2)+(this.localPorteria.height/2)-5, 7, 0xFAFAFA);
-        this.upperVisitantLimit.body.immovable = true;
-        this.lowerVisitantLimit = this.createCircle(GAMESIZE[0]-4, (GAMESIZE[1]/2)-(this.localPorteria.height/2)-5, 7, 0xFAFAFA);
-        this.lowerVisitantLimit.body.immovable = true;
-        game.physics.p2.enable(this.visitantPorteria);
-        
-
- 
-        // Prepare key events!
-        this.upKey = this.game.input.keyboard.addKey(Phaser.Keyboard.UP);
-        this.downKey = this.game.input.keyboard.addKey(Phaser.Keyboard.DOWN);
-        this.rigthKey = this.game.input.keyboard.addKey(Phaser.Keyboard.RIGHT);
-        this.leftKey = this.game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
-        /*
-        this.upKey.onDown.add(this.goUp, this);
-        this.downKey.onDown.add(this.goDown, this);
-        this.rigthKey.onDown.add(this.goRigth, this);
-        this.leftKey.onDown.add(this.goLeft, this);
-        */
-
-        this.visitantScore = 0;
-        this.localScore = 0;
-        this.labelScore = this.game.add.text(20, 20, this.localScore+"-"+this.visitantScore, { font: "30px Arial", fill: "#ffffff" });  
-
-        // Add the jump sound
-        //this.jumpSound = this.game.add.audio('jump');
-
-        // Overlap con P2JS
-        //game.physics.p2.setPostBroadphaseCallback(checkOverlap, this); 
     },
 
     update: function() {
-        this.labelScore.text = this.localScore+"-"+this.visitantScore;
-
+        //game.physics.p2.collide(this.ball, this.mousePointer);
         this.addAcceleration();
-
-        
-        if (this.principalPlayer.inWorld == false)
-            this.restartGame();
-    
-
-        // If player and ball overlap, is a kick!!
-        //game.physics.p2.overlap(this.ball, this.visitantPorteria, this.localGoal, null, this); 
-        //game.physics.p2.overlap(this.ball, this.localPorteria, this.visitantGoal, null, this); 
-
-        game.physics.p2.collide(this.ball, this.principalPlayer);
-
-        game.physics.p2.collide(this.upperLocalLimit, this.ball);
-        game.physics.p2.collide(this.lowerLocalLimit, this.ball);
-
-        game.physics.p2.collide(this.upperVisitantLimit, this.ball);
-        game.physics.p2.collide(this.lowerVisitantLimit, this.ball);
-
-        /* Slowly rotate the bird downward, up to a certain point.
-        if (this.bird.angle < 20)
-            this.bird.angle += 1;  
-            */ 
     },
 
     jump: function() {
