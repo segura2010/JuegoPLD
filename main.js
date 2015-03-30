@@ -11,8 +11,9 @@ var mainState = {
         // Load images
         game.load.image('principalPlayer', 'assets/granada.png');  
         game.load.image('otherPlayers', 'assets/pipe.png'); 
-        game.load.image('porteria', 'assets/pipe.png');
-        game.load.image('ball', 'assets/player.png'); 
+        game.load.image('porteria', 'assets/porteria.png');
+        game.load.image('ball', 'assets/ball.png'); 
+        game.load.image('field', 'assets/campo.jpeg'); 
 
         // Load sounds
         game.load.audio('goal', 'assets/jump.wav');
@@ -24,6 +25,10 @@ var mainState = {
         game.physics.startSystem(Phaser.Physics.P2JS);
         game.physics.p2.restitution = 0.5;
         game.physics.p2.gravity.y = 0;
+
+        // Create football field
+        this.field = game.add.sprite(0, 0, 'field');
+        this.field.scale.x = 0.508; this.field.scale.y = 0.46;
 
         // Prepare key events!
         this.upKey = this.game.input.keyboard.addKey(Phaser.Keyboard.UP);
@@ -199,22 +204,28 @@ var mainState = {
         this.localPorteria.body.immovable = true;
         this.localPorteria.body.collideWorldBounds = false;
         this.localPorteria.body.name = "localPorteria";
-        this.localPorteria.height = 100;
+        this.localPorteria.width = 70;
+        //mainState.localPorteria.body.setRectangle(0,0,100,70)
+        /*
         this.upperLocalLimit = this.createCircle(0, (GAMESIZE[1]/2)+(this.localPorteria.height/2)-5, 7, 0xFAFAFA);
         this.upperLocalLimit.body.immovable = true;
         this.lowerLocalLimit = this.createCircle(0, (GAMESIZE[1]/2)-(this.localPorteria.height/2)-5, 7, 0xFAFAFA);
         this.lowerLocalLimit.body.immovable = true;
+        */
 
         this.visitantPorteria = this.game.add.sprite(GAMESIZE[0], GAMESIZE[1]/2, 'porteria');
         game.physics.p2.enable(this.visitantPorteria);
         this.visitantPorteria.body.immovable = true;
         this.visitantPorteria.body.collideWorldBounds = false;
         this.visitantPorteria.body.name = "visitantPorteria";
-        this.visitantPorteria.height = 100;
+        this.visitantPorteria.width = 70;
+        //mainState.localPorteria.body.setRectangle(0,0,100,70)
+        /*
         this.upperVisitantLimit = this.createCircle(GAMESIZE[0]-4, (GAMESIZE[1]/2)+(this.localPorteria.height/2)-5, 7, 0xFAFAFA);
         this.upperVisitantLimit.body.immovable = true;
         this.lowerVisitantLimit = this.createCircle(GAMESIZE[0]-4, (GAMESIZE[1]/2)-(this.localPorteria.height/2)-5, 7, 0xFAFAFA);
         this.lowerVisitantLimit.body.immovable = true;
+        */
     },
     createPlayer: function(sprite, name)
     {
@@ -234,8 +245,8 @@ var mainState = {
     {
         this.ball = game.add.sprite(100, 100, sprite);
         game.physics.p2.enable(this.ball);
-        this.ball.scale.x = 0.13; this.ball.scale.y = 0.13;
-        this.ball.body.setCircle( 20 /*this.ball.width * 0.95*/);
+        this.ball.scale.x = 0.35; this.ball.scale.y = 0.35;
+        this.ball.body.setCircle( 18 /*this.ball.width * 0.95*/);
         this.ball.body.debug = false;
         //this.ball.body.mass = 1;
         this.ball.body.kinematic = false;
