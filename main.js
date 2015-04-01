@@ -1,5 +1,7 @@
 
 var GAMESIZE = [ 900, 550 ];
+var LOCAL = "local";
+var VISITANT = "visitant";
 
 var game = new Phaser.Game(GAMESIZE[0], GAMESIZE[1], Phaser.AUTO, 'gameDiv');
 
@@ -40,9 +42,9 @@ var mainState = {
         
         this.createPorterias();
 
-        this.createPlayer("principalPlayer", "principalPlayer");
+        this.createPlayer("principalPlayer", "principalPlayer", LOCAL);
 
-        this.createBall("ball");        
+        this.createBall("ball");
 
         this.visitantScore = 0;
         this.localScore = 0;
@@ -176,11 +178,13 @@ var mainState = {
     localGoal: function() {
         this.localScore += 1;
         this.ball.reset(GAMESIZE[0]/2, GAMESIZE[1]/2);
+        this.reallocatePlayers();
         return true;
     },
     visitantGoal: function() {
         this.visitantScore += 1;
         this.ball.reset(GAMESIZE[0]/2, GAMESIZE[1]/2);
+        this.reallocatePlayers();
         return true;
     },
     checkOverlap: function(body1, body2){
@@ -204,7 +208,7 @@ var mainState = {
         this.localPorteria.body.immovable = true;
         this.localPorteria.body.collideWorldBounds = false;
         this.localPorteria.body.name = "localPorteria";
-        this.localPorteria.width = 70;
+        //this.localPorteria.width = 70;
         //mainState.localPorteria.body.setRectangle(0,0,100,70)
         /*
         this.upperLocalLimit = this.createCircle(0, (GAMESIZE[1]/2)+(this.localPorteria.height/2)-5, 7, 0xFAFAFA);
@@ -218,7 +222,7 @@ var mainState = {
         this.visitantPorteria.body.immovable = true;
         this.visitantPorteria.body.collideWorldBounds = false;
         this.visitantPorteria.body.name = "visitantPorteria";
-        this.visitantPorteria.width = 70;
+        //this.visitantPorteria.width = 70;
         //mainState.localPorteria.body.setRectangle(0,0,100,70)
         /*
         this.upperVisitantLimit = this.createCircle(GAMESIZE[0]-4, (GAMESIZE[1]/2)+(this.localPorteria.height/2)-5, 7, 0xFAFAFA);
@@ -227,7 +231,7 @@ var mainState = {
         this.lowerVisitantLimit.body.immovable = true;
         */
     },
-    createPlayer: function(sprite, name)
+    createPlayer: function(sprite, name, team)
     {
         this.players[name] = game.add.sprite(200, 200, sprite);
         game.physics.p2.enable(this.players[name]);
@@ -240,6 +244,7 @@ var mainState = {
         this.players[name].body.name = name;
         this.players[name].vx = 0;
         this.players[name].vy = 0;
+        this.players[name].team = team;
     },
     createBall: function(sprite)
     {
@@ -252,6 +257,20 @@ var mainState = {
         this.ball.body.kinematic = false;
         this.ball.body.collideWorldBounds = true;
         this.ball.body.name = "ball";
+    },
+    reallocatePlayers: function()
+    {
+        for(p in this.players)
+        {
+            if(this.players[p].team == LOCAL)
+            {
+                this.players[p].reset(GAMESIZE[0]/3, GAMESIZE[1]/2);
+            }
+            else
+            {
+                this.players[p].reset(GAMESIZE[0]/3, GAMESIZE[1]/2);
+            }
+        }
     }
 };
 
