@@ -2,16 +2,18 @@
 var GAMESIZE = [ 900, 550 ];
 var LOCAL = "local";
 var VISITANT = "visitant";
+var iaPlayers = 0;
 
 var game = new Phaser.Game(GAMESIZE[0], GAMESIZE[1], Phaser.AUTO, 'gameDiv');
 
 var mainState = {
 
-    preload: function() { 
+    preload: function() {
         game.stage.backgroundColor = '#04B404';
 
         // Load images
-        game.load.image('principalPlayer', 'assets/granada.png');  
+        game.load.image('visitantPlayer', 'assets/visitant.png'); 
+        game.load.image('localPlayer', 'assets/local.png');  
         game.load.image('otherPlayers', 'assets/pipe.png'); 
         game.load.image('porteria', 'assets/porteria.png');
         game.load.image('ball', 'assets/ball.png'); 
@@ -42,7 +44,8 @@ var mainState = {
         
         this.createPorterias();
 
-        this.createPlayer("principalPlayer", "principalPlayer", LOCAL);
+        this.createPlayer("localPlayer", "principalPlayer", LOCAL);
+        this.createIAPlayers(iaPlayers, "visitantPlayer", "iaPlayer", VISITANT);
 
         this.createBall("ball");
 
@@ -55,6 +58,8 @@ var mainState = {
 
         // Overlap con P2JS
         game.physics.p2.setPostBroadphaseCallback(this.checkOverlap, this); 
+
+        this.reallocatePlayers();
 
     },
 
@@ -105,42 +110,40 @@ var mainState = {
         */
         
         //var gameCopy = this;
-        for(p in this.players)
-        { 
-            if(this.upKey.isDown && this.players[p].vy > -MAXVEL)
-            {   this.players[p].vy += -10;
-                this.players[p].body.velocity.y = 10;
-            }
-            else if(this.downKey.isDown && this.players[p].vy < MAXVEL)
-            {   this.players[p].vy += 10;
-                this.players[p].body.velocity.y = this.players[p].vy;
-            }
-            else if(this.players[p].vy > 0)
-            {   this.players[p].vy += -10;
-                this.players[p].body.velocity.y = this.players[p].vy;
-            }
-            else if(this.players[p].vy < 0)
-            {   this.players[p].vy += 10;
-                this.players[p].body.velocity.y = this.players[p].vy;
-            }
-            
+        var p = "principalPlayer";
+        if(this.upKey.isDown && this.players[p].vy > -MAXVEL)
+        {   this.players[p].vy += -10;
+            this.players[p].body.velocity.y = 10;
+        }
+        else if(this.downKey.isDown && this.players[p].vy < MAXVEL)
+        {   this.players[p].vy += 10;
+            this.players[p].body.velocity.y = this.players[p].vy;
+        }
+        else if(this.players[p].vy > 0)
+        {   this.players[p].vy += -10;
+            this.players[p].body.velocity.y = this.players[p].vy;
+        }
+        else if(this.players[p].vy < 0)
+        {   this.players[p].vy += 10;
+            this.players[p].body.velocity.y = this.players[p].vy;
+        }
+        
 
-            if(this.leftKey.isDown && this.players[p].vx > -MAXVEL)
-            {   this.players[p].vx += -10;
-                this.players[p].body.velocity.x = this.players[p].vx;
-            }
-            else if(this.rigthKey.isDown && this.players[p].vx < MAXVEL)
-            {   this.players[p].vx += 10;
-                this.players[p].body.velocity.x = this.players[p].vx;
-            }
-            else if(this.players[p].vx > 0)
-            {   this.players[p].vx += -10;
-                this.players[p].body.velocity.x = this.players[p].vx;
-            }
-            else if(this.players[p].vx < 0)
-            {   this.players[p].vx += 10;
-                this.players[p].body.velocity.x = this.players[p].vx;
-            }
+        if(this.leftKey.isDown && this.players[p].vx > -MAXVEL)
+        {   this.players[p].vx += -10;
+            this.players[p].body.velocity.x = this.players[p].vx;
+        }
+        else if(this.rigthKey.isDown && this.players[p].vx < MAXVEL)
+        {   this.players[p].vx += 10;
+            this.players[p].body.velocity.x = this.players[p].vx;
+        }
+        else if(this.players[p].vx > 0)
+        {   this.players[p].vx += -10;
+            this.players[p].body.velocity.x = this.players[p].vx;
+        }
+        else if(this.players[p].vx < 0)
+        {   this.players[p].vx += 10;
+            this.players[p].body.velocity.x = this.players[p].vx;
         }
         
         
@@ -246,6 +249,13 @@ var mainState = {
         this.players[name].vy = 0;
         this.players[name].team = team;
     },
+    createIAPlayers: function(num, sprite, name, team)
+    {
+        for(i=0;i<num;i++)
+        {
+            this.createPlayer(sprite, name+""+i, team);
+        }
+    },
     createBall: function(sprite)
     {
         this.ball = game.add.sprite(100, 100, sprite);
@@ -275,5 +285,9 @@ var mainState = {
 };
 
 
-game.state.add('main', mainState);  
-game.state.start('main'); 
+function startGame()
+{
+    iaPlayers = document.getElementById("iaNumberTxt").value;
+    game.state.add('main', mainState);  
+    game.state.start('main'); 
+}

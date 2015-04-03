@@ -13,6 +13,15 @@
   .audience{
   	width:150px;
   	height:100px;
+    margin:-2px;
+  }
+  .audience.flip{
+    -moz-transform: scaleX(-1);
+    -o-transform: scaleX(-1);
+    -webkit-transform: scaleX(-1);
+    transform: scaleX(-1);
+    filter: FlipH;
+    -ms-filter: "FlipH";
   }
   </style>
 
@@ -21,10 +30,17 @@
 
 <body>
 
-  <p>Press the spacebar to jump</p>
+  
+  <p>Numero de Jugadores contrarios: <input type="number" id="iaNumberTxt"/></p>
+  <button onclick="startGame()">Jugar</button>
 
   <div align="center">
-  	<img src="assets/audience.jpg" class="audience"><img src="assets/audience.jpg" class="audience"><img src="assets/audience.jpg" class="audience"><img src="assets/audience.jpg" class="audience"><img src="assets/audience.jpg" class="audience"><img src="assets/audience.jpg" class="audience">
+  	<img src="assets/audience.jpg" class="audience">
+    <img src="assets/audience.jpg" class="audience flip">
+    <img src="assets/audience.jpg" class="audience">
+    <img src="assets/audience.jpg" class="audience flip">
+    <img src="assets/audience.jpg" class="audience">
+    <img src="assets/audience.jpg" class="audience flip">
   </div>
   <div id="gameDiv" align="center"> </div>
 
