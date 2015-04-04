@@ -46,8 +46,10 @@ var mainState = {
 
         this.createPlayer("localPlayer", "principalPlayer", LOCAL);
         this.createIAPlayers(iaPlayers, "visitantPlayer", "iaPlayer", VISITANT);
+        this.reallocatePlayers();
 
         this.createBall("ball");
+        this.ball.reset(GAMESIZE[0]/2, GAMESIZE[1]/2);
 
         this.visitantScore = 0;
         this.localScore = 0;
@@ -58,8 +60,6 @@ var mainState = {
 
         // Overlap con P2JS
         game.physics.p2.setPostBroadphaseCallback(this.checkOverlap, this); 
-
-        this.reallocatePlayers();
 
     },
 
@@ -180,13 +180,13 @@ var mainState = {
     },
     localGoal: function() {
         this.localScore += 1;
-        this.ball.reset(GAMESIZE[0]/2, GAMESIZE[1]/2);
+        this.ball.reset((GAMESIZE[0]/2)*1.2, GAMESIZE[1]/2);
         this.reallocatePlayers();
         return true;
     },
     visitantGoal: function() {
         this.visitantScore += 1;
-        this.ball.reset(GAMESIZE[0]/2, GAMESIZE[1]/2);
+        this.ball.reset((GAMESIZE[0]/2)*0.8, GAMESIZE[1]/2);
         this.reallocatePlayers();
         return true;
     },
@@ -194,11 +194,11 @@ var mainState = {
         // console.log(body1.name+":"+body2.name);
         if( ((body1.name == this.localPorteria.body.name) && (body2.name == this.ball.body.name)) || ((body1.name == this.ball.body.name) && (body2.name == this.localPorteria.body.name)) )
         {
-            this.localGoal();
-        }
-        if( ((body1.name == this.visitantPorteria.body.name) && (body2.name == this.ball.body.name)) || ((body1.name == this.ball.body.name) && (body2.name == this.visitantPorteria.body.name)) )
-        {
             this.visitantGoal();
+        }
+        else if( ((body1.name == this.visitantPorteria.body.name) && (body2.name == this.ball.body.name)) || ((body1.name == this.ball.body.name) && (body2.name == this.visitantPorteria.body.name)) )
+        {
+            this.localGoal();
         }
 
         return true;
@@ -269,16 +269,19 @@ var mainState = {
         this.ball.body.name = "ball";
     },
     reallocatePlayers: function()
-    {
+    {   // Colocar los jugadores en "linea", no en el mismo sitio
+        var l = 1, v = 1;
         for(p in this.players)
         {
             if(this.players[p].team == LOCAL)
-            {
-                this.players[p].reset(GAMESIZE[0]/3, GAMESIZE[1]/2);
+            {  
+                this.players[p].reset((GAMESIZE[0]/4), (GAMESIZE[1]/2)*l);
+                l = (l+1) % 5;
             }
             else
             {
-                this.players[p].reset(GAMESIZE[0]/3, GAMESIZE[1]/2);
+                this.players[p].reset((GAMESIZE[0]/4)*3, (GAMESIZE[1]/2)*v);
+                v = (v+1) % 5;
             }
         }
     }
