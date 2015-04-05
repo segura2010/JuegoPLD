@@ -10,6 +10,9 @@
 
 
   <style>
+  .audienceContainer{
+    margin:-2px;
+  }
   .audience{
   	width:150px;
   	height:100px;
@@ -29,12 +32,10 @@
 </head>
 
 <body>
-
   
-  <p>Numero de Jugadores contrarios: <input type="number" id="iaNumberTxt"/></p>
-  <button onclick="startGame()">Jugar</button>
-
-  <div align="center">
+  <br>
+  
+  <div align="center" class="audienceContainer">
   	<img src="assets/audience.jpg" class="audience">
     <img src="assets/audience.jpg" class="audience flip">
     <img src="assets/audience.jpg" class="audience">
@@ -42,7 +43,15 @@
     <img src="assets/audience.jpg" class="audience">
     <img src="assets/audience.jpg" class="audience flip">
   </div>
-  <div id="gameDiv" align="center"> </div>
+  <div id="gameDiv" align="center">
+  </div>
+
+  <br><br>
+  <p>Limite de goles: <input type="number" id="goalLimitTxt" value="0"/></p>
+  <p>Numero de Jugadores contrarios: <input type="number" id="iaNumberTxt"/></p>
+  <button onclick="startOnePlayerGame()">Jugar con IA</button>
+  <p>En el modo 2 jugadores el jugador local jugará con las flechas del teclado y el visitante con las teclas ASDW</p>
+  <button onclick="startTwoPlayersGame()">Modo 2 Jugadores</button>
 
 </body>
 

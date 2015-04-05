@@ -3,6 +3,8 @@ var GAMESIZE = [ 900, 550 ];
 var LOCAL = "local";
 var VISITANT = "visitant";
 var iaPlayers = 0;
+var twoPlayers = false;
+var goalLimit = 0;
 
 var game = new Phaser.Game(GAMESIZE[0], GAMESIZE[1], Phaser.AUTO, 'gameDiv');
 
@@ -29,6 +31,7 @@ var mainState = {
         game.physics.startSystem(Phaser.Physics.P2JS);
         game.physics.p2.restitution = 0.5;
         game.physics.p2.gravity.y = 0;
+        game.physics.p2.gravity.x = 0;
 
         // Create football field
         this.field = game.add.sprite(0, 0, 'field');
@@ -45,6 +48,18 @@ var mainState = {
         this.createPorterias();
 
         this.createPlayer("localPlayer", "principalPlayer", LOCAL);
+
+        if(twoPlayers)
+        {
+            // key events for second player
+            this.upKeySec = this.game.input.keyboard.addKey(Phaser.Keyboard.W);
+            this.downKeySec = this.game.input.keyboard.addKey(Phaser.Keyboard.S);
+            this.rigthKeySec = this.game.input.keyboard.addKey(Phaser.Keyboard.D);
+            this.leftKeySec = this.game.input.keyboard.addKey(Phaser.Keyboard.A);
+            this.createPlayer("visitantPlayer", "secondPlayer", VISITANT);
+            iaPlayers = 0;
+        }
+
         this.createIAPlayers(iaPlayers, "visitantPlayer", "iaPlayer", VISITANT);
         this.reallocatePlayers();
 
@@ -53,13 +68,15 @@ var mainState = {
 
         this.visitantScore = 0;
         this.localScore = 0;
-        this.labelScore = this.game.add.text(20, 20, this.localScore+"-"+this.visitantScore, { font: "30px Arial", fill: "#ffffff" });  
+        this.labelScore = this.game.add.text(20, 20, this.localScore+"-"+this.visitantScore, { font: "30px Arial", fill: "#ffffff" });
+
+        this.alertMessages = this.game.add.text(GAMESIZE[0]/2.7, GAMESIZE[1]/2, "", { font: "50px Arial", fill: "#ffffff" });  
 
         // Add the jump sound
         //this.jumpSound = this.game.add.audio('jump');
 
         // Overlap con P2JS
-        game.physics.p2.setPostBroadphaseCallback(this.checkOverlap, this); 
+        game.physics.p2.setPostBroadphaseCallback(this.checkOverlap, this);
 
     },
 
@@ -97,57 +114,93 @@ var mainState = {
             this.bird.angle += 1;  
             */ 
     },
-    restartGame: function() {
-        game.state.start('main');
+    endGame: function() {
+        for(p in this.players)
+        {
+            this.players[p].kill();
+        }
     },
     addAcceleration: function() {
         // http://jsfiddle.net/sh036s95/
         // http://www.html5gamedevs.com/topic/7474-set-constant-velocity-for-body-physicsp2js/
-        var MAXVEL = 270;
-        /*
-        this.players[p].vy = this.principalPlayer.body.velocity.y;
-        this.players[p].vx = this.principalPlayer.body.velocity.x;
-        */
+        var MAXVEL = 200;
+        var acc = 7;
         
-        //var gameCopy = this;
         var p = "principalPlayer";
         if(this.upKey.isDown && this.players[p].vy > -MAXVEL)
-        {   this.players[p].vy += -10;
-            this.players[p].body.velocity.y = 10;
+        {   this.players[p].vy += -acc;
+            this.players[p].body.velocity.y = this.players[p].vy;
         }
         else if(this.downKey.isDown && this.players[p].vy < MAXVEL)
-        {   this.players[p].vy += 10;
+        {   this.players[p].vy += acc;
             this.players[p].body.velocity.y = this.players[p].vy;
         }
         else if(this.players[p].vy > 0)
-        {   this.players[p].vy += -10;
+        {   this.players[p].vy += -acc;
             this.players[p].body.velocity.y = this.players[p].vy;
         }
         else if(this.players[p].vy < 0)
-        {   this.players[p].vy += 10;
+        {   this.players[p].vy += acc;
             this.players[p].body.velocity.y = this.players[p].vy;
         }
         
 
         if(this.leftKey.isDown && this.players[p].vx > -MAXVEL)
-        {   this.players[p].vx += -10;
+        {   this.players[p].vx += -acc;
             this.players[p].body.velocity.x = this.players[p].vx;
         }
         else if(this.rigthKey.isDown && this.players[p].vx < MAXVEL)
-        {   this.players[p].vx += 10;
+        {   this.players[p].vx += acc;
             this.players[p].body.velocity.x = this.players[p].vx;
         }
         else if(this.players[p].vx > 0)
-        {   this.players[p].vx += -10;
+        {   this.players[p].vx += -acc;
             this.players[p].body.velocity.x = this.players[p].vx;
         }
         else if(this.players[p].vx < 0)
-        {   this.players[p].vx += 10;
+        {   this.players[p].vx += acc;
             this.players[p].body.velocity.x = this.players[p].vx;
         }
+
+        if(twoPlayers)
+        {
+            p = "secondPlayer";
+            if(this.upKeySec.isDown && this.players[p].vy > -MAXVEL)
+            {   this.players[p].vy += -10;
+                this.players[p].body.velocity.y = this.players[p].vy;
+            }
+            else if(this.downKeySec.isDown && this.players[p].vy < MAXVEL)
+            {   this.players[p].vy += 10;
+                this.players[p].body.velocity.y = this.players[p].vy;
+            }
+            else if(this.players[p].vy > 0)
+            {   this.players[p].vy += -10;
+                this.players[p].body.velocity.y = this.players[p].vy;
+            }
+            else if(this.players[p].vy < 0)
+            {   this.players[p].vy += 10;
+                this.players[p].body.velocity.y = this.players[p].vy;
+            }
+            
+
+            if(this.leftKeySec.isDown && this.players[p].vx > -MAXVEL)
+            {   this.players[p].vx += -10;
+                this.players[p].body.velocity.x = this.players[p].vx;
+            }
+            else if(this.rigthKeySec.isDown && this.players[p].vx < MAXVEL)
+            {   this.players[p].vx += 10;
+                this.players[p].body.velocity.x = this.players[p].vx;
+            }
+            else if(this.players[p].vx > 0)
+            {   this.players[p].vx += -10;
+                this.players[p].body.velocity.x = this.players[p].vx;
+            }
+            else if(this.players[p].vx < 0)
+            {   this.players[p].vx += 10;
+                this.players[p].body.velocity.x = this.players[p].vx;
+            }
+        }
         
-        
-        //console.log(this.players[p].vx+":"+this.players[p].vy)
     },
     kickBall: function(ball, player) {
         this.ball.body.velocity = player.body.velocity;
@@ -157,7 +210,6 @@ var mainState = {
     },
     createCircle: function(posX, posY, radius, color)
     {
-        
         var c = this.game.add.sprite(posX, posY)
         this.graphics = this.game.add.graphics(0, 0);
         this.graphics.beginFill(color);
@@ -166,28 +218,20 @@ var mainState = {
         this.graphics.endFill();
         c.addChild(this.circle);
         this.game.physics.arcade.enable(c);
-        
-
-        /* Otra forma
-        var hexGraphics = new Phaser.Graphics();
-        hexGraphics.beginFill(color);
-        hexGraphics.drawCircle(0.5, 0.5, radius);
-        c = game.add.sprite(posX,posY,hexGraphics.generateTexture());
-        this.game.physics.arcade.enable(c);
-        */
-
         return c;
     },
     localGoal: function() {
         this.localScore += 1;
         this.ball.reset((GAMESIZE[0]/2)*1.2, GAMESIZE[1]/2);
         this.reallocatePlayers();
+        this.checkIfSomeoneWins();
         return true;
     },
     visitantGoal: function() {
         this.visitantScore += 1;
         this.ball.reset((GAMESIZE[0]/2)*0.8, GAMESIZE[1]/2);
         this.reallocatePlayers();
+        this.checkIfSomeoneWins();
         return true;
     },
     checkOverlap: function(body1, body2){
@@ -206,40 +250,24 @@ var mainState = {
     createPorterias: function()
     {
         // Porterias creation
-        this.localPorteria = this.game.add.sprite(0, GAMESIZE[1]/2, 'porteria');
+        this.localPorteria = this.game.add.sprite(-10, GAMESIZE[1]/2, 'porteria');
         game.physics.p2.enable(this.localPorteria);
         this.localPorteria.body.immovable = true;
         this.localPorteria.body.collideWorldBounds = false;
         this.localPorteria.body.name = "localPorteria";
-        //this.localPorteria.width = 70;
-        //mainState.localPorteria.body.setRectangle(0,0,100,70)
-        /*
-        this.upperLocalLimit = this.createCircle(0, (GAMESIZE[1]/2)+(this.localPorteria.height/2)-5, 7, 0xFAFAFA);
-        this.upperLocalLimit.body.immovable = true;
-        this.lowerLocalLimit = this.createCircle(0, (GAMESIZE[1]/2)-(this.localPorteria.height/2)-5, 7, 0xFAFAFA);
-        this.lowerLocalLimit.body.immovable = true;
-        */
 
-        this.visitantPorteria = this.game.add.sprite(GAMESIZE[0], GAMESIZE[1]/2, 'porteria');
+        this.visitantPorteria = this.game.add.sprite(GAMESIZE[0]+10, GAMESIZE[1]/2, 'porteria');
         game.physics.p2.enable(this.visitantPorteria);
         this.visitantPorteria.body.immovable = true;
         this.visitantPorteria.body.collideWorldBounds = false;
         this.visitantPorteria.body.name = "visitantPorteria";
-        //this.visitantPorteria.width = 70;
-        //mainState.localPorteria.body.setRectangle(0,0,100,70)
-        /*
-        this.upperVisitantLimit = this.createCircle(GAMESIZE[0]-4, (GAMESIZE[1]/2)+(this.localPorteria.height/2)-5, 7, 0xFAFAFA);
-        this.upperVisitantLimit.body.immovable = true;
-        this.lowerVisitantLimit = this.createCircle(GAMESIZE[0]-4, (GAMESIZE[1]/2)-(this.localPorteria.height/2)-5, 7, 0xFAFAFA);
-        this.lowerVisitantLimit.body.immovable = true;
-        */
     },
     createPlayer: function(sprite, name, team)
     {
         this.players[name] = game.add.sprite(200, 200, sprite);
         game.physics.p2.enable(this.players[name]);
-        this.players[name].scale.x = 0.2; this.players[name].scale.y = 0.2;
-        this.players[name].body.setCircle( 28 /*this.principalPlayer.width * 0.95*/);
+        this.players[name].scale.x = 0.12; this.players[name].scale.y = 0.12;
+        this.players[name].body.setCircle( 15 /*this.principalPlayer.width * 0.95*/);
         //this.principalPlayer.body.debug = false;
         //this.principalPlayer.body.mass = 0.01;
         //this.principalPlayer.body.kinematic = true;
@@ -260,8 +288,8 @@ var mainState = {
     {
         this.ball = game.add.sprite(100, 100, sprite);
         game.physics.p2.enable(this.ball);
-        this.ball.scale.x = 0.35; this.ball.scale.y = 0.35;
-        this.ball.body.setCircle( 18 /*this.ball.width * 0.95*/);
+        this.ball.scale.x = 0.2; this.ball.scale.y = 0.2;
+        this.ball.body.setCircle( 10 /*this.ball.width * 0.95*/);
         this.ball.body.debug = false;
         //this.ball.body.mass = 1;
         this.ball.body.kinematic = false;
@@ -270,27 +298,67 @@ var mainState = {
     },
     reallocatePlayers: function()
     {   // Colocar los jugadores en "linea", no en el mismo sitio
+        var numPlayers = 0;
+        for(p in this.players)
+        {
+            numPlayers++;
+        }
+        var space = GAMESIZE[1] / numPlayers;
         var l = 1, v = 1;
         for(p in this.players)
         {
             if(this.players[p].team == LOCAL)
             {  
-                this.players[p].reset((GAMESIZE[0]/4), (GAMESIZE[1]/2)*l);
-                l = (l+1) % 5;
+                this.players[p].reset((GAMESIZE[0]/4), space*l);
+                l = (l+1) % numPlayers;
             }
             else
             {
-                this.players[p].reset((GAMESIZE[0]/4)*3, (GAMESIZE[1]/2)*v);
-                v = (v+1) % 5;
+                this.players[p].reset((GAMESIZE[0]/4)*3, space*v);
+                v = (v+1) % numPlayers;
             }
+        }
+    },
+    alertGoal: function()
+    {
+        this.alertMessages.text = "GOOOOOL!";
+        setTimeout(function(){
+            mainState.alertMessages.text = "";
+        }, 1000);
+    },
+    checkIfSomeoneWins: function()
+    {
+        if(goalLimit <= this.localScore)
+        {
+            this.endGame();
+            this.alertMessages.text = "LOCAL ha GANADO!";
+        }
+        else if(goalLimit <= this.visitantScore)
+        {
+            this.endGame();
+            this.alertMessages.text = "VISITANTE ha GANADO!";
+        }
+        else
+        {
+            this.alertGoal();
         }
     }
 };
 
 
-function startGame()
+function startOnePlayerGame()
 {
+    twoPlayers = false;
     iaPlayers = document.getElementById("iaNumberTxt").value;
+    goalLimit = document.getElementById("goalLimitTxt").value;
+    game.state.add('main', mainState);  
+    game.state.start('main'); 
+}
+
+function startTwoPlayersGame()
+{
+    twoPlayers = true;
+    goalLimit = document.getElementById("goalLimitTxt").value;
     game.state.add('main', mainState);  
     game.state.start('main'); 
 }
