@@ -15,8 +15,7 @@ var mainState = {
 
         // Load images
         game.load.image('visitantPlayer', 'assets/visitant.png'); 
-        game.load.image('localPlayer', 'assets/local.png');  
-        game.load.image('otherPlayers', 'assets/pipe.png'); 
+        game.load.image('localPlayer', 'assets/local.png'); 
         game.load.image('porteria', 'assets/porteria.png');
         game.load.image('ball', 'assets/ball.png'); 
         game.load.image('field', 'assets/campo.jpeg'); 
