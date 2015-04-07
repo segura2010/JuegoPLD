@@ -22,8 +22,8 @@ var mainState = {
         game.load.image('field', 'assets/campo.jpeg'); 
 
         // Load sounds
-        game.load.audio('goal', 'assets/jump.wav');
-        game.load.audio('kick', 'assets/jump.wav'); 
+        game.load.audio('goalAudio', 'assets/goal.mp3');
+        game.load.audio('collisionAudio', 'assets/collision.mp3'); 
     },
 
     create: function() { 
@@ -38,10 +38,10 @@ var mainState = {
         this.field.scale.x = 0.508; this.field.scale.y = 0.46;
 
         // Prepare key events!
-        this.upKey = this.game.input.keyboard.addKey(Phaser.Keyboard.UP);
-        this.downKey = this.game.input.keyboard.addKey(Phaser.Keyboard.DOWN);
-        this.rigthKey = this.game.input.keyboard.addKey(Phaser.Keyboard.RIGHT);
-        this.leftKey = this.game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
+        this.upKeySec = this.game.input.keyboard.addKey(Phaser.Keyboard.W);
+        this.downKeySec = this.game.input.keyboard.addKey(Phaser.Keyboard.S);
+        this.rigthKeySec = this.game.input.keyboard.addKey(Phaser.Keyboard.D);
+        this.leftKeySec = this.game.input.keyboard.addKey(Phaser.Keyboard.A);
 
         this.players = {};
         
@@ -52,10 +52,10 @@ var mainState = {
         if(twoPlayers)
         {
             // key events for second player
-            this.upKeySec = this.game.input.keyboard.addKey(Phaser.Keyboard.W);
-            this.downKeySec = this.game.input.keyboard.addKey(Phaser.Keyboard.S);
-            this.rigthKeySec = this.game.input.keyboard.addKey(Phaser.Keyboard.D);
-            this.leftKeySec = this.game.input.keyboard.addKey(Phaser.Keyboard.A);
+            this.upKey = this.game.input.keyboard.addKey(Phaser.Keyboard.UP);
+            this.downKey = this.game.input.keyboard.addKey(Phaser.Keyboard.DOWN);
+            this.rigthKey = this.game.input.keyboard.addKey(Phaser.Keyboard.RIGHT);
+            this.leftKey = this.game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
             this.createPlayer("visitantPlayer", "secondPlayer", VISITANT);
             iaPlayers = 0;
         }
@@ -78,6 +78,12 @@ var mainState = {
         // Overlap con P2JS
         game.physics.p2.setPostBroadphaseCallback(this.checkOverlap, this);
 
+        // Adding audio!
+        this.goalAudio = game.add.audio('goalAudio');
+        this.collisionAudio = game.add.audio('collisionAudio');
+        // Decode if audio are MP3
+        game.sound.setDecodedCallback([ this.goalAudio, this.collisionAudio ], start, this);
+
     },
 
     update: function() {
@@ -89,30 +95,6 @@ var mainState = {
 
         this.addAcceleration();
 
-        /*
-        if (this.principalPlayer.inWorld == false)
-            this.restartGame();
-        */
-    
-
-        // If player and ball overlap, is a kick!!
-        //game.physics.p2.overlap(this.ball, this.visitantPorteria, this.localGoal, null, this); 
-        //game.physics.p2.overlap(this.ball, this.localPorteria, this.visitantGoal, null, this); 
-
-        /*
-        game.physics.p2.collide(this.ball, this.principalPlayer);
-
-        game.physics.p2.collide(this.upperLocalLimit, this.ball);
-        game.physics.p2.collide(this.lowerLocalLimit, this.ball);
-
-        game.physics.p2.collide(this.upperVisitantLimit, this.ball);
-        game.physics.p2.collide(this.lowerVisitantLimit, this.ball);
-        */
-
-        /* Slowly rotate the bird downward, up to a certain point.
-        if (this.bird.angle < 20)
-            this.bird.angle += 1;  
-            */ 
     },
     endGame: function() {
         for(p in this.players)
@@ -127,11 +109,11 @@ var mainState = {
         var acc = 7;
         
         var p = "principalPlayer";
-        if(this.upKey.isDown && this.players[p].vy > -MAXVEL)
+        if(this.upKeySec.isDown && this.players[p].vy > -MAXVEL)
         {   this.players[p].vy += -acc;
             this.players[p].body.velocity.y = this.players[p].vy;
         }
-        else if(this.downKey.isDown && this.players[p].vy < MAXVEL)
+        else if(this.downKeySec.isDown && this.players[p].vy < MAXVEL)
         {   this.players[p].vy += acc;
             this.players[p].body.velocity.y = this.players[p].vy;
         }
@@ -145,11 +127,11 @@ var mainState = {
         }
         
 
-        if(this.leftKey.isDown && this.players[p].vx > -MAXVEL)
+        if(this.leftKeySec.isDown && this.players[p].vx > -MAXVEL)
         {   this.players[p].vx += -acc;
             this.players[p].body.velocity.x = this.players[p].vx;
         }
-        else if(this.rigthKey.isDown && this.players[p].vx < MAXVEL)
+        else if(this.rigthKeySec.isDown && this.players[p].vx < MAXVEL)
         {   this.players[p].vx += acc;
             this.players[p].body.velocity.x = this.players[p].vx;
         }
@@ -165,38 +147,38 @@ var mainState = {
         if(twoPlayers)
         {
             p = "secondPlayer";
-            if(this.upKeySec.isDown && this.players[p].vy > -MAXVEL)
-            {   this.players[p].vy += -10;
+            if(this.upKey.isDown && this.players[p].vy > -MAXVEL)
+            {   this.players[p].vy += -acc;
                 this.players[p].body.velocity.y = this.players[p].vy;
             }
-            else if(this.downKeySec.isDown && this.players[p].vy < MAXVEL)
-            {   this.players[p].vy += 10;
+            else if(this.downKey.isDown && this.players[p].vy < MAXVEL)
+            {   this.players[p].vy += acc;
                 this.players[p].body.velocity.y = this.players[p].vy;
             }
             else if(this.players[p].vy > 0)
-            {   this.players[p].vy += -10;
+            {   this.players[p].vy += -acc;
                 this.players[p].body.velocity.y = this.players[p].vy;
             }
             else if(this.players[p].vy < 0)
-            {   this.players[p].vy += 10;
+            {   this.players[p].vy += acc;
                 this.players[p].body.velocity.y = this.players[p].vy;
             }
             
 
-            if(this.leftKeySec.isDown && this.players[p].vx > -MAXVEL)
-            {   this.players[p].vx += -10;
+            if(this.leftKey.isDown && this.players[p].vx > -MAXVEL)
+            {   this.players[p].vx += -acc;
                 this.players[p].body.velocity.x = this.players[p].vx;
             }
-            else if(this.rigthKeySec.isDown && this.players[p].vx < MAXVEL)
-            {   this.players[p].vx += 10;
+            else if(this.rigthKey.isDown && this.players[p].vx < MAXVEL)
+            {   this.players[p].vx += acc;
                 this.players[p].body.velocity.x = this.players[p].vx;
             }
             else if(this.players[p].vx > 0)
-            {   this.players[p].vx += -10;
+            {   this.players[p].vx += -acc;
                 this.players[p].body.velocity.x = this.players[p].vx;
             }
             else if(this.players[p].vx < 0)
-            {   this.players[p].vx += 10;
+            {   this.players[p].vx += acc;
                 this.players[p].body.velocity.x = this.players[p].vx;
             }
         }
@@ -224,6 +206,7 @@ var mainState = {
         this.localScore += 1;
         this.ball.reset((GAMESIZE[0]/2)*1.2, GAMESIZE[1]/2);
         this.reallocatePlayers();
+        this.goalAudio.play();
         this.checkIfSomeoneWins();
         return true;
     },
@@ -231,6 +214,7 @@ var mainState = {
         this.visitantScore += 1;
         this.ball.reset((GAMESIZE[0]/2)*0.8, GAMESIZE[1]/2);
         this.reallocatePlayers();
+        this.goalAudio.play();
         this.checkIfSomeoneWins();
         return true;
     },
@@ -267,10 +251,7 @@ var mainState = {
         this.players[name] = game.add.sprite(200, 200, sprite);
         game.physics.p2.enable(this.players[name]);
         this.players[name].scale.x = 0.12; this.players[name].scale.y = 0.12;
-        this.players[name].body.setCircle( 15 /*this.principalPlayer.width * 0.95*/);
-        //this.principalPlayer.body.debug = false;
-        //this.principalPlayer.body.mass = 0.01;
-        //this.principalPlayer.body.kinematic = true;
+        this.players[name].body.setCircle( 15 );
         this.players[name].body.collideWorldBounds = true;
         this.players[name].body.name = name;
         this.players[name].vx = 0;
@@ -289,8 +270,7 @@ var mainState = {
         this.ball = game.add.sprite(100, 100, sprite);
         game.physics.p2.enable(this.ball);
         this.ball.scale.x = 0.2; this.ball.scale.y = 0.2;
-        this.ball.body.setCircle( 10 /*this.ball.width * 0.95*/);
-        this.ball.body.debug = false;
+        this.ball.body.setCircle( 10 );
         //this.ball.body.mass = 1;
         this.ball.body.kinematic = false;
         this.ball.body.collideWorldBounds = true;
