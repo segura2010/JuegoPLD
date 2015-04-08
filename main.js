@@ -8,6 +8,7 @@ var goalLimit = 0;
 
 var game = new Phaser.Game(GAMESIZE[0], GAMESIZE[1], Phaser.AUTO, 'gameDiv');
 
+// One player or two players game main state
 var mainState = {
 
     preload: function() {
@@ -80,7 +81,7 @@ var mainState = {
         // Adding audio!
         this.goalAudio = game.add.audio('goalAudio');
         this.collisionAudio = game.add.audio('collisionAudio');
-        // Decode if audio are MP3
+        // Decode if audio is MP3
         game.sound.setDecodedCallback([ this.goalAudio, this.collisionAudio ], start, this);
 
     },
@@ -323,21 +324,7 @@ var mainState = {
         }
     }
 };
+// Add mainState to game states
+game.state.add('main', mainState);
 
 
-function startOnePlayerGame()
-{
-    twoPlayers = false;
-    iaPlayers = document.getElementById("iaNumberTxt").value;
-    goalLimit = document.getElementById("goalLimitTxt").value;
-    game.state.add('main', mainState);  
-    game.state.start('main'); 
-}
-
-function startTwoPlayersGame()
-{
-    twoPlayers = true;
-    goalLimit = document.getElementById("goalLimitTxt").value;
-    game.state.add('main', mainState);  
-    game.state.start('main'); 
-}
