@@ -312,11 +312,13 @@ var mainState = {
         {
             this.endGame();
             this.alertMessages.text = "LOCAL ha GANADO!";
+            setTimeout(mostrarMenu, 2500);
         }
         else if(goalLimit <= this.visitantScore)
         {
             this.endGame();
             this.alertMessages.text = "VISITANTE ha GANADO!";
+            setTimeout(mostrarMenu, 2500);
         }
         else
         {
