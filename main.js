@@ -6,6 +6,8 @@ var iaPlayers = 0;
 var twoPlayers = false;
 var goalLimit = 0;
 
+var IA_FRAMES_UPDATE = 1;
+
 var game = new Phaser.Game(GAMESIZE[0], GAMESIZE[1], Phaser.AUTO, 'gameDiv');
 
 // One player or two players game main state
@@ -27,6 +29,8 @@ var mainState = {
     },
 
     create: function() { 
+
+        this.IAUpdateCounter = 0;
         
         game.physics.startSystem(Phaser.Physics.P2JS);
         game.physics.p2.restitution = 0.5;
@@ -82,11 +86,18 @@ var mainState = {
         this.goalAudio = game.add.audio('goalAudio');
         this.collisionAudio = game.add.audio('collisionAudio');
         // Decode if audio is MP3
-        game.sound.setDecodedCallback([ this.goalAudio, this.collisionAudio ], start, this);
+        //game.sound.setDecodedCallback([ this.goalAudio, this.collisionAudio ], start, this);
 
     },
 
     update: function() {
+
+        if(this.IAUpdateCounter >= IA_FRAMES_UPDATE && !twoPlayers)
+        {
+            this.IAUpdateCounter = 0;
+            this.updateIAPlayers();
+        }
+        this.IAUpdateCounter++;
 
         this.labelScore.text = this.localScore+"-"+this.visitantScore;
 
@@ -109,6 +120,7 @@ var mainState = {
         var acc = 7;
         
         var p = "principalPlayer";
+        console.log("("+this.players[p].body.x+", "+this.players[p].body.y+")")
         if(this.upKeySec.isDown && this.players[p].vy > -MAXVEL)
         {   this.players[p].vy += -acc;
             this.players[p].body.velocity.y = this.players[p].vy;
@@ -180,6 +192,50 @@ var mainState = {
             else if(this.players[p].vx < 0)
             {   this.players[p].vx += acc;
                 this.players[p].body.velocity.x = this.players[p].vx;
+            }
+        }
+
+        if(!twoPlayers)
+        {
+            for(p in this.players)
+            {
+                if(this.players[p].team == VISITANT)
+                {
+                    if(this.players[p].up && this.players[p].vy > -MAXVEL)
+                    {   this.players[p].vy += -acc;
+                        this.players[p].body.velocity.y = this.players[p].vy;
+                    }
+                    else if(this.players[p].down && this.players[p].vy < MAXVEL)
+                    {   this.players[p].vy += acc;
+                        this.players[p].body.velocity.y = this.players[p].vy;
+                    }
+                    else if(this.players[p].vy > 0)
+                    {   this.players[p].vy += -acc;
+                        this.players[p].body.velocity.y = this.players[p].vy;
+                    }
+                    else if(this.players[p].vy < 0)
+                    {   this.players[p].vy += acc;
+                        this.players[p].body.velocity.y = this.players[p].vy;
+                    }
+                    
+
+                    if(this.players[p].left && this.players[p].vx > -MAXVEL)
+                    {   this.players[p].vx += -acc;
+                        this.players[p].body.velocity.x = this.players[p].vx;
+                    }
+                    else if(this.players[p].rigth && this.players[p].vx < MAXVEL)
+                    {   this.players[p].vx += acc;
+                        this.players[p].body.velocity.x = this.players[p].vx;
+                    }
+                    else if(this.players[p].vx > 0)
+                    {   this.players[p].vx += -acc;
+                        this.players[p].body.velocity.x = this.players[p].vx;
+                    }
+                    else if(this.players[p].vx < 0)
+                    {   this.players[p].vx += acc;
+                        this.players[p].body.velocity.x = this.players[p].vx;
+                    }
+                }
             }
         }
         
@@ -257,6 +313,13 @@ var mainState = {
         this.players[name].vx = 0;
         this.players[name].vy = 0;
         this.players[name].team = team;
+
+        // movement
+        // is the same control that the user, if up==1 -> increment aceleration in Y
+        this.players[name].up = 0;
+        this.players[name].down = 0;
+        this.players[name].left = 0;
+        this.players[name].rigth = 0;
     },
     createIAPlayers: function(num, sprite, name, team)
     {
@@ -323,6 +386,81 @@ var mainState = {
         else
         {
             this.alertGoal();
+        }
+    },
+    updateIAPlayers: function()
+    {
+        var MAX_X_IA = (GAMESIZE[0]/2)/2;
+        var MAX_Y_IA = (GAMESIZE[1]/2);
+        var MAX_ERROR = 5;
+        var mind = 90000000000000000000;
+        var nearestPlayer = 0;
+
+        for(p in this.players)
+        {   // All IA players will go to his "porteria" to defend
+            // only the nearest player to the ball will go to get it
+            if(this.players[p].team == VISITANT)
+            {
+                var player = this.players[p];
+                if(player.body.x < (MAX_X_IA/*+MAX_ERROR*/))
+                {   // Go to protect your zone
+                    this.players[p].rigth = 1; 
+                }
+                else
+                {
+                    this.players[p].rigth = this.players[p].left = 0;
+                }
+                if(player.body.y < (MAX_Y_IA-MAX_ERROR))
+                {   // Go to protect your zone (center)
+                    this.players[p].up = 1;
+                    this.players[p].down = 0;
+                }
+                else if(player.body.y > (MAX_Y_IA+MAX_ERROR))
+                {   // Go to protect your zone (center)
+                    this.players[p].down = 1;
+                    this.players[p].up = 0;
+                }
+                else
+                {
+                    this.players[p].up = this.players[p].down = 0;
+                }
+
+                var d = distance(player.body.x, player.body.y, this.ball.body.x, this.ball.body.y);
+                //console.log("D: " + d);
+                if(mind > d)
+                {
+                    mind = d;
+                    nearestPlayer = p;
+                }
+            }
+        }
+
+        this.players[nearestPlayer].up = 0;
+        this.players[nearestPlayer].down = 0;
+        this.players[nearestPlayer].left = 0;
+        this.players[nearestPlayer].rigth = 0;
+        if(neuralNetworkTrained())
+        {
+            // Move nearest player using Neural Network
+        }
+        else
+        {
+            if(this.players[nearestPlayer].body.x < this.ball.body.x)
+            {
+                this.players[nearestPlayer].rigth = 1;
+            }
+            else
+            {
+                this.players[nearestPlayer].left = 1;
+            }
+            if(this.players[nearestPlayer].body.y < this.ball.body.y)
+            {
+                this.players[nearestPlayer].down = 1;
+            }
+            else
+            {
+                this.players[nearestPlayer].up = 1;
+            }
         }
     }
 };
