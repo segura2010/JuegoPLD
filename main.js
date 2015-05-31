@@ -6,7 +6,15 @@ var iaPlayers = 0;
 var twoPlayers = false;
 var goalLimit = 0;
 
+// how many frames wait to update moves on IA players
 var IA_FRAMES_UPDATE = 1;
+// how many frames wait to save data to train neural network
+var NEURAL_DATA_FRAMES_SAVE = 20;
+// max data saved to train neural network
+var MAX_NEURAL_DATA = 1000;
+
+// Neural Network Initialization
+var neuralNet = null;
 
 var game = new Phaser.Game(GAMESIZE[0], GAMESIZE[1], Phaser.AUTO, 'gameDiv');
 
@@ -31,6 +39,7 @@ var mainState = {
     create: function() { 
 
         this.IAUpdateCounter = 0;
+        this.NeuralNetSaveCounter = 0;
         
         game.physics.startSystem(Phaser.Physics.P2JS);
         game.physics.p2.restitution = 0.5;
@@ -86,7 +95,7 @@ var mainState = {
         this.goalAudio = game.add.audio('goalAudio');
         this.collisionAudio = game.add.audio('collisionAudio');
         // Decode if audio is MP3
-        //game.sound.setDecodedCallback([ this.goalAudio, this.collisionAudio ], start, this);
+        game.sound.setDecodedCallback([ this.goalAudio, this.collisionAudio ], start, this);
 
     },
 
@@ -98,6 +107,13 @@ var mainState = {
             this.updateIAPlayers();
         }
         this.IAUpdateCounter++;
+
+        if(this.NeuralNetSaveCounter >= NEURAL_DATA_FRAMES_SAVE)
+        {
+            this.NeuralNetSaveCounter = 0;
+            this.saveNeuralNetworkData();
+        }
+        this.NeuralNetSaveCounter++;
 
         this.labelScore.text = this.localScore+"-"+this.visitantScore;
 
@@ -120,7 +136,6 @@ var mainState = {
         var acc = 7;
         
         var p = "principalPlayer";
-        console.log("("+this.players[p].body.x+", "+this.players[p].body.y+")")
         if(this.upKeySec.isDown && this.players[p].vy > -MAXVEL)
         {   this.players[p].vy += -acc;
             this.players[p].body.velocity.y = this.players[p].vy;
@@ -388,6 +403,30 @@ var mainState = {
             this.alertGoal();
         }
     },
+    ballInCorner: function()
+    {
+        var b = this.ball.body;
+        var minxy = 13;
+        var maxy = GAMESIZE[2] - minxy, maxx = GAMESIZE[1] - minxy;
+
+        if(b.x < minxy && b.y > maxy)
+        {
+            return true;
+        }
+        else if(b.x < minxy && b.y < minxy)
+        {
+            return true;
+        }
+        else if(b.x > maxx && b.y < minxy)
+        {
+            return true;
+        }
+        else if(b.x > maxx && b.y > maxy)
+        {
+            return true;
+        }
+        return false;
+    },
     updateIAPlayers: function()
     {
         var MAX_X_IA = (GAMESIZE[0]/2)/2;
@@ -439,32 +478,119 @@ var mainState = {
         this.players[nearestPlayer].down = 0;
         this.players[nearestPlayer].left = 0;
         this.players[nearestPlayer].rigth = 0;
-        if(neuralNetworkTrained())
+        if(neuralNet)
         {
             // Move nearest player using Neural Network
+            var px = this.players[nearestPlayer].body.x;
+            var py = this.players[nearestPlayer].body.y;
+            var actData = { ballx: this.ball.body.x, bally: this.ball.body.y, playerx: px, playery:py };
+            var action = neuralNet.run(actData);
+            //console.log(action);
+
+            var roundVar = 0.5;
+            this.players[nearestPlayer].up = parseInt(action.up+roundVar);
+            this.players[nearestPlayer].down = parseInt(action.down+roundVar);
+            this.players[nearestPlayer].left = parseInt(action.left+roundVar);
+            this.players[nearestPlayer].rigth = parseInt(action.rigth+roundVar);
+            var sum = this.players[nearestPlayer].rigth + this.players[nearestPlayer].up + this.players[nearestPlayer].down + this.players[nearestPlayer].left;
+
+            if(sum < 1)
+            {
+                this.players[nearestPlayer].up = 1;
+            }
         }
         else
         {
-            if(this.players[nearestPlayer].body.x < this.ball.body.x)
+            var inCorner = this.ballInCorner();
+            if(inCorner)
             {
                 this.players[nearestPlayer].rigth = 1;
             }
             else
             {
-                this.players[nearestPlayer].left = 1;
-            }
-            if(this.players[nearestPlayer].body.y < this.ball.body.y)
-            {
-                this.players[nearestPlayer].down = 1;
-            }
-            else
-            {
-                this.players[nearestPlayer].up = 1;
+                if(this.players[nearestPlayer].body.x < this.ball.body.x)
+                {
+                    this.players[nearestPlayer].rigth = 1;
+                }
+                else
+                {
+                    this.players[nearestPlayer].left = 1;
+                }
+                if(this.players[nearestPlayer].body.y < this.ball.body.y && this.players[nearestPlayer].body.x > this.ball.body.x)
+                {
+                    this.players[nearestPlayer].down = 1;
+                }
+                else if(this.players[nearestPlayer].body.y > this.ball.body.y && this.players[nearestPlayer].body.x > this.ball.body.x)
+                {
+                    this.players[nearestPlayer].up = 1;
+                }
             }
         }
+    },
+    saveNeuralNetworkData: function()
+    {
+        var player = this.players["principalPlayer"];
+        var data = [];
+        if(localStorage.neuralNetworkData)
+        {   // if i have save previus game data on javascript localStorage,
+            // i will restore it
+            data = JSON.parse(localStorage.neuralNetworkData);
+        }
+        // i add new data
+        // var up = this.upKeySec.isDown ? 1 : 0;
+        var playerx = GAMESIZE[0] - player.body.x;
+        var playery = GAMESIZE[1] - player.body.y;
+        var actData = { input: { ballx: this.ball.body.x, bally: this.ball.body.y, playerx: playerx, playery:playery }, output: { up: this.upKeySec.isDown ? 1 : 0, down: this.downKeySec.isDown ? 1 : 0, rigth: this.leftKeySec.isDown ? 1 : 0, left:this.rigthKeySec.isDown ? 1 : 0 } };
+        if(data.length > MAX_NEURAL_DATA)
+        {   // if mora than max, delete first element (older)
+            data.splice(0,1);
+        }
+        data.push(actData);
+        // i save on localStorage
+        localStorage.neuralNetworkData = JSON.stringify(data);
     }
 };
 // Add mainState to game states
 game.state.add('main', mainState);
 
+function initNeuralNetwork()
+{
+    if(localStorage.neuralNet)
+    {
+        var neuralNetJSON = JSON.parse(localStorage.neuralNet);
+        neuralNet = new brain.NeuralNetwork();
+        neuralNet.fromJSON(neuralNetJSON);
+    }
+}
 
+function trainNeuralNetwork()
+{
+    console.log("Training..");
+    var data = [];
+    if(localStorage.neuralNetworkData)
+    {   // if i have save previus game data on javascript localStorage,
+        // i will restore it
+        data = JSON.parse(localStorage.neuralNetworkData);
+        neuralNet = new brain.NeuralNetwork();
+        neuralNet.train(data);
+        localStorage.neuralNet = JSON.stringify(neuralNet.toJSON());
+    }
+}
+function clearNeuralNetwork()
+{
+    neuralNet = null;
+}
+
+/*
+
+To train neural network
+net.train(
+[
+    {input: { ballx: 44.6, bally: 2, playerx: 4.5, playery:100 }, output: { up: 1, down:0, rigth:1, left:0 }},
+    {input: { ballx: 10, bally: 5, playerx: 46, playery:17 }, output: { up: 1, down:0, rigth:0, left:1 }}
+])
+
+To use trained neural network
+net.run({ ballx: 44.6, bally: 2, playerx: 4.5, playery:100 })
+
+*/
