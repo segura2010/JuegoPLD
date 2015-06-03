@@ -11,7 +11,7 @@ var IA_FRAMES_UPDATE = 1;
 // how many frames wait to save data to train neural network
 var NEURAL_DATA_FRAMES_SAVE = 20;
 // max data saved to train neural network
-var MAX_NEURAL_DATA = 1000;
+var MAX_NEURAL_DATA = 2000;
 
 // Neural Network Initialization
 var neuralNet = null;
@@ -95,7 +95,7 @@ var mainState = {
         this.goalAudio = game.add.audio('goalAudio');
         this.collisionAudio = game.add.audio('collisionAudio');
         // Decode if audio is MP3
-        game.sound.setDecodedCallback([ this.goalAudio, this.collisionAudio ], start, this);
+        //game.sound.setDecodedCallback([ this.goalAudio, this.collisionAudio ], start, this);
 
     },
 
@@ -121,6 +121,7 @@ var mainState = {
         this.visitantPorteria.body.setZeroVelocity();
 
         this.addAcceleration();
+        this.sacarPelotaCorner();
 
     },
     endGame: function() {
@@ -427,6 +428,34 @@ var mainState = {
         }
         return false;
     },
+    sacarPelotaCorner: function()
+    {
+        var b = this.ball.body;
+        var minxy = 13;
+        var maxy = GAMESIZE[2] - minxy, maxx = GAMESIZE[1] - minxy;
+        var VEL = 50;
+
+        if(b.x < minxy && b.y > maxy)
+        {
+            this.ball.body.velocity.y = -VEL;
+            this.ball.body.velocity.x = VEL;
+        }
+        else if(b.x < minxy && b.y < minxy)
+        {
+            this.ball.body.velocity.y = VEL;
+            this.ball.body.velocity.x = VEL;
+        }
+        else if(b.x > maxx && b.y < minxy)
+        {
+            this.ball.body.velocity.y = VEL;
+            this.ball.body.velocity.x = -VEL;
+        }
+        else if(b.x > maxx && b.y > maxy)
+        {
+            this.ball.body.velocity.y = -VEL;
+            this.ball.body.velocity.x = -VEL;
+        }
+    },
     updateIAPlayers: function()
     {
         var MAX_X_IA = (GAMESIZE[0]/2)/2;
@@ -496,7 +525,19 @@ var mainState = {
 
             if(sum < 1)
             {
-                this.players[nearestPlayer].up = 1;
+                // this.players[nearestPlayer].up = 1;
+                var mayorA = 0;
+                var mayorAccion = "up";
+                for(a in action)
+                {   
+                    if(action[a] > mayorA)
+                    {
+                        mayorA = action[a];
+                        mayorAccion = a;
+                    }
+                }
+                console.log("MENOR: " + mayorAccion);
+                this.players[nearestPlayer][mayorAccion] = 1;
             }
         }
         else
@@ -540,7 +581,21 @@ var mainState = {
         // var up = this.upKeySec.isDown ? 1 : 0;
         var playerx = GAMESIZE[0] - player.body.x;
         var playery = GAMESIZE[1] - player.body.y;
-        var actData = { input: { ballx: this.ball.body.x, bally: this.ball.body.y, playerx: playerx, playery:playery }, output: { up: this.upKeySec.isDown ? 1 : 0, down: this.downKeySec.isDown ? 1 : 0, rigth: this.leftKeySec.isDown ? 1 : 0, left:this.rigthKeySec.isDown ? 1 : 0 } };
+        // var actData = { input: { ballx: this.ball.body.x, bally: this.ball.body.y, playerx: playerx, playery:playery }, output: { up: this.upKeySec.isDown ? 1 : 0, down: this.downKeySec.isDown ? 1 : 0, rigth: this.leftKeySec.isDown ? 1 : 0, left:this.rigthKeySec.isDown ? 1 : 0 } };
+        // Usamos la posicion de la pelota con respecto al jugador, si esta
+        //  Encima, Debajo, a izquierda o derecha
+        // para entrenar la red neuronal
+        var isUp = 0, isRight = 0;
+        if(this.ball.body.x < player.body.x)
+        {   // la derecha del jugador es la izquierda para el contrario
+            isRight = 1;
+        }
+        if(this.ball.body.y < player.body.y)
+        {
+            isUp = 1;
+        }
+
+        var actData = { input: { isUp:isUp, isRight:isRight }, output: { up: this.upKeySec.isDown ? 1 : 0, down: this.downKeySec.isDown ? 1 : 0, rigth: this.leftKeySec.isDown ? 1 : 0, left:this.rigthKeySec.isDown ? 1 : 0 } };
         if(data.length > MAX_NEURAL_DATA)
         {   // if mora than max, delete first element (older)
             data.splice(0,1);
