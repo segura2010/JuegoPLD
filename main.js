@@ -392,13 +392,13 @@ var mainState = {
         if(goalLimit <= this.localScore)
         {
             this.endGame();
-            this.alertMessages.text = "LOCAL ha GANADO!";
+            this.alertMessages.text = "LOCAL \nha GANADO!";
             setTimeout(mostrarMenu, 2500);
         }
         else if(goalLimit <= this.visitantScore)
         {
             this.endGame();
-            this.alertMessages.text = "VISITANTE ha GANADO!";
+            this.alertMessages.text = "VISITANTE \nha GANADO!";
             setTimeout(mostrarMenu, 2500);
         }
         else
