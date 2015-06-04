@@ -83,10 +83,7 @@ var mainState = {
         this.localScore = 0;
         this.labelScore = this.game.add.text(20, 20, this.localScore+"-"+this.visitantScore, { font: "30px Arial", fill: "#ffffff" });
 
-        this.alertMessages = this.game.add.text(GAMESIZE[0]/2.7, GAMESIZE[1]/2, "", { font: "50px Arial", fill: "#ffffff" });  
-
-        // Add the jump sound
-        //this.jumpSound = this.game.add.audio('jump');
+        this.alertMessages = this.game.add.text(GAMESIZE[0]/5, GAMESIZE[1]/2, "", { font: "50px Arial", fill: "#ffffff" });  
 
         // Overlap con P2JS
         game.physics.p2.setPostBroadphaseCallback(this.checkOverlap, this);
@@ -96,6 +93,10 @@ var mainState = {
         this.collisionAudio = game.add.audio('collisionAudio');
         // Decode if audio is MP3
         //game.sound.setDecodedCallback([ this.goalAudio, this.collisionAudio ], start, this);
+        
+        // Add virtual joystick
+        this.joystick = this.game.plugins.add(Phaser.Plugin.TouchControl);
+        this.joystick.inputEnable();
 
     },
 
@@ -137,11 +138,11 @@ var mainState = {
         var acc = 7;
         
         var p = "principalPlayer";
-        if(this.upKeySec.isDown && this.players[p].vy > -MAXVEL)
+        if((this.upKeySec.isDown || this.joystick.cursors.up) && this.players[p].vy > -MAXVEL)
         {   this.players[p].vy += -acc;
             this.players[p].body.velocity.y = this.players[p].vy;
         }
-        else if(this.downKeySec.isDown && this.players[p].vy < MAXVEL)
+        else if((this.downKeySec.isDown || this.joystick.cursors.down) && this.players[p].vy < MAXVEL)
         {   this.players[p].vy += acc;
             this.players[p].body.velocity.y = this.players[p].vy;
         }
@@ -155,11 +156,11 @@ var mainState = {
         }
         
 
-        if(this.leftKeySec.isDown && this.players[p].vx > -MAXVEL)
+        if((this.leftKeySec.isDown || this.joystick.cursors.left) && this.players[p].vx > -MAXVEL)
         {   this.players[p].vx += -acc;
             this.players[p].body.velocity.x = this.players[p].vx;
         }
-        else if(this.rigthKeySec.isDown && this.players[p].vx < MAXVEL)
+        else if((this.rigthKeySec.isDown || this.joystick.cursors.right) && this.players[p].vx < MAXVEL)
         {   this.players[p].vx += acc;
             this.players[p].body.velocity.x = this.players[p].vx;
         }
@@ -171,6 +172,7 @@ var mainState = {
         {   this.players[p].vx += acc;
             this.players[p].body.velocity.x = this.players[p].vx;
         }
+
 
         if(twoPlayers)
         {
@@ -408,7 +410,7 @@ var mainState = {
     {
         var b = this.ball.body;
         var minxy = 13;
-        var maxy = GAMESIZE[2] - minxy, maxx = GAMESIZE[1] - minxy;
+        var maxy = GAMESIZE[1] - minxy, maxx = GAMESIZE[0] - minxy;
 
         if(b.x < minxy && b.y > maxy)
         {
@@ -432,7 +434,7 @@ var mainState = {
     {
         var b = this.ball.body;
         var minxy = 13;
-        var maxy = GAMESIZE[2] - minxy, maxx = GAMESIZE[1] - minxy;
+        var maxy = GAMESIZE[1] - minxy, maxx = GAMESIZE[0] - minxy;
         var VEL = 50;
 
         if(b.x < minxy && b.y > maxy)
@@ -469,29 +471,18 @@ var mainState = {
             // only the nearest player to the ball will go to get it
             if(this.players[p].team == VISITANT)
             {
+                this.players[p].up = 0;
+                this.players[p].down = 0;
+                this.players[p].left = 0;
+                this.players[p].rigth = 0;
                 var player = this.players[p];
-                if(player.body.x < (MAX_X_IA/*+MAX_ERROR*/))
-                {   // Go to protect your zone
-                    this.players[p].rigth = 1; 
-                }
-                else
-                {
-                    this.players[p].rigth = this.players[p].left = 0;
-                }
-                if(player.body.y < (MAX_Y_IA-MAX_ERROR))
-                {   // Go to protect your zone (center)
-                    this.players[p].up = 1;
-                    this.players[p].down = 0;
-                }
-                else if(player.body.y > (MAX_Y_IA+MAX_ERROR))
-                {   // Go to protect your zone (center)
-                    this.players[p].down = 1;
-                    this.players[p].up = 0;
-                }
-                else
-                {
-                    this.players[p].up = this.players[p].down = 0;
-                }
+                // El jugador se prepara para defender en un punto aleatorio de su campo
+                var variacion = 25;
+                var maxx = GAMESIZE[0], minx = this.ball.body.x - variacion;
+                var maxy = GAMESIZE[1], miny = this.ball.body.y - variacion;
+                var x = Math.floor(Math.random() * (maxx-minx) + minx);
+                var y = Math.floor(Math.random() * (maxy-miny) + miny);
+                this.goToPoint(p, x, y);
 
                 var d = distance(player.body.x, player.body.y, this.ball.body.x, this.ball.body.y);
                 //console.log("D: " + d);
@@ -549,23 +540,29 @@ var mainState = {
             }
             else
             {
-                if(this.players[nearestPlayer].body.x < this.ball.body.x)
-                {
-                    this.players[nearestPlayer].rigth = 1;
-                }
-                else
-                {
-                    this.players[nearestPlayer].left = 1;
-                }
-                if(this.players[nearestPlayer].body.y < this.ball.body.y && this.players[nearestPlayer].body.x > this.ball.body.x)
-                {
-                    this.players[nearestPlayer].down = 1;
-                }
-                else if(this.players[nearestPlayer].body.y > this.ball.body.y && this.players[nearestPlayer].body.x > this.ball.body.x)
-                {
-                    this.players[nearestPlayer].up = 1;
-                }
+                this.goToPoint(nearestPlayer, this.ball.body.x, this.ball.body.y);
             }
+        }
+    },
+    goToPoint: function(player, x, y)
+    {   // Esta funcion comprueba donde esta el jugador y el punto x, y
+        // y "pulsa" los botones (las variables) de arriba, abajo etc..
+        // para ir a ese punto
+        if(this.players[player].body.x < x)
+        {
+            this.players[player].rigth = 1;
+        }
+        else
+        {
+            this.players[player].left = 1;
+        }
+        if(this.players[player].body.y < y && this.players[player].body.x > x)
+        {
+            this.players[player].down = 1;
+        }
+        else if(this.players[player].body.y > y && this.players[player].body.x > x)
+        {
+            this.players[player].up = 1;
         }
     },
     saveNeuralNetworkData: function()
