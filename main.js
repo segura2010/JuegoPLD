@@ -392,13 +392,13 @@ var mainState = {
         if(goalLimit <= this.localScore)
         {
             this.endGame();
-            this.alertMessages.text = "LOCAL \nha GANADO!";
+            this.alertMessages.text = "LOCAL ha GANADO!";
             setTimeout(mostrarMenu, 2500);
         }
         else if(goalLimit <= this.visitantScore)
         {
             this.endGame();
-            this.alertMessages.text = "VISITANTE \nha GANADO!";
+            this.alertMessages.text = "VISITANTE ha GANADO!";
             setTimeout(mostrarMenu, 2500);
         }
         else
@@ -527,7 +527,7 @@ var mainState = {
                         mayorAccion = a;
                     }
                 }
-                console.log("MENOR: " + mayorAccion);
+                console.log("MAYOR: " + mayorAccion);
                 this.players[nearestPlayer][mayorAccion] = 1;
             }
         }
@@ -536,7 +536,7 @@ var mainState = {
             var inCorner = this.ballInCorner();
             if(inCorner)
             {
-                this.players[nearestPlayer].rigth = 1;
+                this.players[nearestPlayer].rigth = 0;
             }
             else
             {
