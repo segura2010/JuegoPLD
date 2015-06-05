@@ -1,7 +1,7 @@
 // Menu Game State
 
-var jugadoresIA = 0;
-var limiteGoles = 0;
+var jugadoresIA = 1;
+var limiteGoles = 1;
 
 var menuState = {
     preload: function() {
@@ -75,7 +75,7 @@ function anadirIA()
 
 function quitarIA()
 {
-    if(jugadoresIA > 0)
+    if(jugadoresIA > 1)
     {
         jugadoresIA--;
     }
@@ -91,7 +91,7 @@ function anadirGoles()
 
 function quitarGoles()
 {
-    if(limiteGoles > 0)
+    if(limiteGoles > 1)
     {
         limiteGoles--;
     }

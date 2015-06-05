@@ -6,20 +6,16 @@ var iaPlayers = 0;
 var twoPlayers = false;
 var goalLimit = 0;
 
-// how many frames wait to update moves on IA players
-var IA_FRAMES_UPDATE = 1;
-// how many frames wait to save data to train neural network
-var NEURAL_DATA_FRAMES_SAVE = 20;
-// max data saved to train neural network
-var MAX_NEURAL_DATA = 2000;
-
-// Neural Network Initialization
-var neuralNet = null;
+// inicializo el objeto de PeerJS
+var peer = null;
+var PEERJS_API = "39sprc0gk506yldi";
+var myPeerId = null;
+var playerPeers = [];
 
 var game = new Phaser.Game(GAMESIZE[0], GAMESIZE[1], Phaser.AUTO, 'gameDiv');
 
 // One player or two players game main state
-var mainState = {
+var multiplayerState = {
 
     preload: function() {
         game.stage.backgroundColor = '#04B404';
@@ -37,14 +33,19 @@ var mainState = {
     },
 
     create: function() { 
-
-        this.IAUpdateCounter = 0;
-        this.NeuralNetSaveCounter = 0;
+        this.players = {};
         
         game.physics.startSystem(Phaser.Physics.P2JS);
         game.physics.p2.restitution = 0.5;
         game.physics.p2.gravity.y = 0;
         game.physics.p2.gravity.x = 0;
+        
+        // Inicializo la conexion
+        this.imServer = false;
+        peer = new Peer({key: PEERJS_API});
+        manejoPeerJS();
+        
+        this.connectToGame();
 
         // Create football field
         this.field = game.add.sprite(0, 0, 'field');
@@ -55,25 +56,9 @@ var mainState = {
         this.downKeySec = this.game.input.keyboard.addKey(Phaser.Keyboard.S);
         this.rigthKeySec = this.game.input.keyboard.addKey(Phaser.Keyboard.D);
         this.leftKeySec = this.game.input.keyboard.addKey(Phaser.Keyboard.A);
-
-        this.players = {};
         
         this.createPorterias();
 
-        this.createPlayer("localPlayer", "principalPlayer", LOCAL);
-
-        if(twoPlayers)
-        {
-            // key events for second player
-            this.upKey = this.game.input.keyboard.addKey(Phaser.Keyboard.UP);
-            this.downKey = this.game.input.keyboard.addKey(Phaser.Keyboard.DOWN);
-            this.rigthKey = this.game.input.keyboard.addKey(Phaser.Keyboard.RIGHT);
-            this.leftKey = this.game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
-            this.createPlayer("visitantPlayer", "secondPlayer", VISITANT);
-            iaPlayers = 0;
-        }
-
-        this.createIAPlayers(iaPlayers, "visitantPlayer", "iaPlayer", VISITANT);
         this.reallocatePlayers();
 
         this.createBall("ball");
@@ -102,22 +87,6 @@ var mainState = {
 
     update: function() {
 
-        if(this.IAUpdateCounter >= IA_FRAMES_UPDATE && !twoPlayers)
-        {
-            this.IAUpdateCounter = 0;
-            this.updateIAPlayers();
-        }
-        this.IAUpdateCounter++;
-
-        /*
-        if(this.NeuralNetSaveCounter >= NEURAL_DATA_FRAMES_SAVE)
-        {
-            this.NeuralNetSaveCounter = 0;
-            this.saveNeuralNetworkData();
-        }
-        this.NeuralNetSaveCounter++;
-        */
-
         this.labelScore.text = this.localScore+"-"+this.visitantScore;
 
         this.localPorteria.body.setZeroVelocity();
@@ -126,20 +95,11 @@ var mainState = {
         this.addAcceleration();
         this.sacarPelotaCorner();
         
-        // IA Adaptativa segun el resutado
-        if(this.localScore < this.visitantScore)
-        {
-            IA_FRAMES_UPDATE = 20;
+        if(this.imServer)
+        {   // Si el jugador es el "servidor" (el que se encarga de conectarlos a todos, el creador de la partida)
+            // me encargo de sincronizar todo
+            this.syncPlayers();
         }
-        else if(this.localScore == this.visitantScore)
-        {
-            IA_FRAMES_UPDATE = 7;
-        }
-        else
-        {
-            IA_FRAMES_UPDATE = 1;
-        }
-        //document.getElementById("debug").innerHTML = IA_FRAMES_UPDATE;
 
     },
     endGame: function() {
@@ -230,6 +190,7 @@ var mainState = {
             }
         }
 
+        /*
         if(!twoPlayers)
         {
             for(p in this.players)
@@ -273,6 +234,7 @@ var mainState = {
                 }
             }
         }
+        */
         
     },
     kickBall: function(ball, player) {
@@ -475,191 +437,110 @@ var mainState = {
             this.ball.body.velocity.x = -VEL;
         }
     },
-    updateIAPlayers: function()
-    {
-        var MAX_X_IA = (GAMESIZE[0]/2)/2;
-        var MAX_Y_IA = (GAMESIZE[1]/2);
-        var MAX_ERROR = 5;
-        var mind = 90000000000000000000;
-        var nearestPlayer = 0;
-
-        for(p in this.players)
-        {   // All IA players will go to his "porteria" to defend
-            // only the nearest player to the ball will go to get it
-            if(this.players[p].team == VISITANT)
-            {
-                this.players[p].up = 0;
-                this.players[p].down = 0;
-                this.players[p].left = 0;
-                this.players[p].rigth = 0;
-                var player = this.players[p];
-                // El jugador se prepara para defender en un punto aleatorio de su campo
-                var variacion = 25;
-                var maxx = GAMESIZE[0], minx = this.ball.body.x - variacion;
-                var maxy = GAMESIZE[1], miny = this.ball.body.y - variacion;
-                var x = Math.floor(Math.random() * (maxx-minx) + minx);
-                var y = Math.floor(Math.random() * (maxy-miny) + miny);
-                this.goToPoint(p, x, y);
-
-                var d = distance(player.body.x, player.body.y, this.ball.body.x, this.ball.body.y);
-                //console.log("D: " + d);
-                if(mind > d)
-                {
-                    mind = d;
-                    nearestPlayer = p;
-                }
+    syncPlayers: function()
+    {   // Sincroniza la informacion de todos los jugadores
+        var data = {
+            players: [],
+            ball: {
+                x: this.ball.body.x,
+                y: this.ball.body.y
             }
         }
-
-        this.players[nearestPlayer].up = 0;
-        this.players[nearestPlayer].down = 0;
-        this.players[nearestPlayer].left = 0;
-        this.players[nearestPlayer].rigth = 0;
-        if(neuralNet)
-        {
-            // Move nearest player using Neural Network
-            var px = this.players[nearestPlayer].body.x;
-            var py = this.players[nearestPlayer].body.y;
-            var actData = { ballx: this.ball.body.x, bally: this.ball.body.y, playerx: px, playery:py };
-            var action = neuralNet.run(actData);
-            //console.log(action);
-
-            var roundVar = 0.5;
-            this.players[nearestPlayer].up = parseInt(action.up+roundVar);
-            this.players[nearestPlayer].down = parseInt(action.down+roundVar);
-            this.players[nearestPlayer].left = parseInt(action.left+roundVar);
-            this.players[nearestPlayer].rigth = parseInt(action.rigth+roundVar);
-            var sum = this.players[nearestPlayer].rigth + this.players[nearestPlayer].up + this.players[nearestPlayer].down + this.players[nearestPlayer].left;
-
-            if(sum < 1)
-            {
-                // this.players[nearestPlayer].up = 1;
-                var mayorA = 0;
-                var mayorAccion = "up";
-                for(a in action)
-                {   
-                    if(action[a] > mayorA)
-                    {
-                        mayorA = action[a];
-                        mayorAccion = a;
-                    }
-                }
-                console.log("MENOR: " + mayorAccion);
-                this.players[nearestPlayer][mayorAccion] = 1;
+        for(p in this.players)
+        {   // Recogemos los datos de los jugadores
+            var player = this.players[p];
+            data.players[p] = {
+                x: player.body.x,
+                y: player.body.y,
+                velx: player.body.velocity.x,
+                vely: player.body.velocity.y,
             }
+        }
+        data.players = this.players;
+        for(p in playerPeers)
+        {   // Enviamos a cada jugador la informacion actualizada
+            var player = playerPeers[p];
+            player.send(data);
+        }
+    },
+    syncMe: function()
+    {   // Sincronizo con el jugador servidor mi informacion
+        var player = this.players["principalPlayer"];
+        var data = {
+            x: player.body.x,
+            y: player.body.y,
+            velx: player.body.velocity.x,
+            vely: player.body.velocity.y,
+        }
+        // Envio mi informacion actualizada al servidor
+        peer.myConnection.send(player);
+    },
+    connectToGame: function()
+    {   // Funcion que se conecta a un juego (un peer id)
+        var id = prompt("ID de la partida a conectarse (dejalo en blanco si eres el creador de la partida):", "");
+        if(id != "")
+        {   // Si me da un id, me intento conectar a el
+            // sino, es el creador de la partida
+            peer.myConnection = peer.connect(id);
+            peer.myConnection.on('open', function(){
+                var team = prompt("Conectado! \n Elige:\n 1. Visitante \n 2.Local", "");
+                if(team == "1")
+                {
+                    team = LOCAL;
+                }
+                else
+                {
+                    team = VISITANT;
+                }
+                this.createPlayer("localPlayer", "principalPlayer", team);
+                //peer.myConnection.send({team:team});
+            });
+            peer.myConnection.on('data', function(d){
+                console.log(d);
+                this.players = d.players;
+                this.ball.body.x = d.ball.x;
+                this.ball.body.y = d.ball.y;
+            });
         }
         else
         {
-            var inCorner = this.ballInCorner();
-            if(inCorner)
+            var team = prompt("Conectado! \n Elige:\n 1. Visitante \n 2.Local", "");
+            var sprite = "";
+            if(team == "1")
             {
-                this.goToPoint(nearestPlayer, GAMESIZE[0]/2, GAMESIZE[1]/2);
+                team = LOCAL;
+                sprite = "localPlayer";
             }
             else
             {
-                this.goToPoint(nearestPlayer, this.ball.body.x, this.ball.body.y);
+                team = VISITANT;
+                sprite = "visitantPlayer";
             }
+            this.createPlayer(sprite, "principalPlayer", team);
+            this.imServer = true;
         }
-    },
-    goToPoint: function(player, x, y)
-    {   // Esta funcion comprueba donde esta el jugador y el punto x, y
-        // y "pulsa" los botones (las variables) de arriba, abajo etc..
-        // para ir a ese punto
-        if(this.players[player].body.x < x)
-        {
-            this.players[player].rigth = 1;
-        }
-        else
-        {
-            this.players[player].left = 1;
-        }
-        if(this.players[player].body.y < y && this.players[player].body.x > x)
-        {
-            this.players[player].down = 1;
-        }
-        else if(this.players[player].body.y > y && this.players[player].body.x > x)
-        {
-            this.players[player].up = 1;
-        }
-    },
-    saveNeuralNetworkData: function()
-    {
-        var player = this.players["principalPlayer"];
-        var data = [];
-        if(localStorage.neuralNetworkData)
-        {   // if i have save previus game data on javascript localStorage,
-            // i will restore it
-            data = JSON.parse(localStorage.neuralNetworkData);
-        }
-        // i add new data
-        // var up = this.upKeySec.isDown ? 1 : 0;
-        var playerx = GAMESIZE[0] - player.body.x;
-        var playery = GAMESIZE[1] - player.body.y;
-        // var actData = { input: { ballx: this.ball.body.x, bally: this.ball.body.y, playerx: playerx, playery:playery }, output: { up: this.upKeySec.isDown ? 1 : 0, down: this.downKeySec.isDown ? 1 : 0, rigth: this.leftKeySec.isDown ? 1 : 0, left:this.rigthKeySec.isDown ? 1 : 0 } };
-        // Usamos la posicion de la pelota con respecto al jugador, si esta
-        //  Encima, Debajo, a izquierda o derecha
-        // para entrenar la red neuronal
-        var isUp = 0, isRight = 0;
-        if(this.ball.body.x < player.body.x)
-        {   // la derecha del jugador es la izquierda para el contrario
-            isRight = 1;
-        }
-        if(this.ball.body.y < player.body.y)
-        {
-            isUp = 1;
-        }
-
-        var actData = { input: { isUp:isUp, isRight:isRight }, output: { up: this.upKeySec.isDown ? 1 : 0, down: this.downKeySec.isDown ? 1 : 0, rigth: this.leftKeySec.isDown ? 1 : 0, left:this.rigthKeySec.isDown ? 1 : 0 } };
-        if(data.length > MAX_NEURAL_DATA)
-        {   // if mora than max, delete first element (older)
-            data.splice(0,1);
-        }
-        data.push(actData);
-        // i save on localStorage
-        localStorage.neuralNetworkData = JSON.stringify(data);
     }
 };
 // Add mainState to game states
-game.state.add('main', mainState);
+game.state.add('multiplayer', multiplayerState);
 
-function initNeuralNetwork()
+// Manejo de eventos de peerJS
+function manejoPeerJS()
 {
-    if(localStorage.neuralNet)
-    {
-        var neuralNetJSON = JSON.parse(localStorage.neuralNet);
-        neuralNet = new brain.NeuralNetwork();
-        neuralNet.fromJSON(neuralNetJSON);
-    }
+    peer.on('open', function(peerid) {
+        myPeerId = peerid;
+        alert("Tu PEERID: " + myPeerId);
+    });
+    
+    peer.on('connection', function(data) {
+        // cuando un jugador se conecta a mi partida
+        //console.log("ALGUIEN CONECTO!");
+        //console.log(data);
+        playerPeers[data.id] = data;
+        playerPeers[data.id].on('data', function(d){
+            multiplayerState.players[data.id] = d;
+        });
+    });    
 }
 
-function trainNeuralNetwork()
-{
-    console.log("Training..");
-    var data = [];
-    if(localStorage.neuralNetworkData)
-    {   // if i have save previus game data on javascript localStorage,
-        // i will restore it
-        data = JSON.parse(localStorage.neuralNetworkData);
-        neuralNet = new brain.NeuralNetwork();
-        neuralNet.train(data);
-        localStorage.neuralNet = JSON.stringify(neuralNet.toJSON());
-    }
-}
-function clearNeuralNetwork()
-{
-    neuralNet = null;
-}
 
-/*
-
-To train neural network
-net.train(
-[
-    {input: { ballx: 44.6, bally: 2, playerx: 4.5, playery:100 }, output: { up: 1, down:0, rigth:1, left:0 }},
-    {input: { ballx: 10, bally: 5, playerx: 46, playery:17 }, output: { up: 1, down:0, rigth:0, left:1 }}
-])
-
-To use trained neural network
-net.run({ ballx: 44.6, bally: 2, playerx: 4.5, playery:100 })
-
-*/
