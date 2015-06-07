@@ -63,7 +63,6 @@ var menuState = {
     }
 };
 game.state.add('menu', menuState);
-game.state.start('menu');
 
 function anadirIA()
 {
@@ -114,5 +113,11 @@ function startTwoPlayersGame()
 
 function mostrarMenu()
 {
+    /* var params = parseUrl( document.URL.split('?')[1] );
+    if(params.id)
+    {
+        gameId = params.id;
+        startMultiPlayer();
+    }*/
     game.state.start('menu'); 
 }

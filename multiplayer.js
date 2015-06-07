@@ -6,13 +6,17 @@ var iaPlayers = 0;
 var twoPlayers = false;
 var goalLimit = 0;
 
+var FRAMES_MULTI_UPDATE = 2;
+
+var started = false;
+
 // inicializo el objeto de PeerJS
 var peer = null;
 var PEERJS_API = "39sprc0gk506yldi";
 var myPeerId = null;
 var playerPeers = [];
 
-var game = new Phaser.Game(GAMESIZE[0], GAMESIZE[1], Phaser.AUTO, 'gameDiv');
+var gameId = null;
 
 // One player or two players game main state
 var multiplayerState = {
@@ -33,6 +37,7 @@ var multiplayerState = {
     },
 
     create: function() { 
+        this.multiUpdateFramesCounter = 0;
         this.players = {};
         
         game.physics.startSystem(Phaser.Physics.P2JS);
@@ -95,11 +100,20 @@ var multiplayerState = {
         this.addAcceleration();
         this.sacarPelotaCorner();
         
-        if(this.imServer)
-        {   // Si el jugador es el "servidor" (el que se encarga de conectarlos a todos, el creador de la partida)
-            // me encargo de sincronizar todo
-            this.syncPlayers();
+        if(this.multiUpdateFramesCounter > FRAMES_MULTI_UPDATE)
+        {
+            if(this.imServer)
+            {   // Si el jugador es el "servidor" (el que se encarga de conectarlos a todos, el creador de la partida)
+                // me encargo de sincronizar todo
+                this.syncPlayers();
+            }
+            else
+            {
+                this.syncMe();
+            }
+            this.multiUpdateFramesCounter = 0;
         }
+        this.multiUpdateFramesCounter++;
 
     },
     endGame: function() {
@@ -114,88 +128,11 @@ var multiplayerState = {
         var MAXVEL = 200;
         var acc = 7;
         
-        var p = "principalPlayer";
-        if((this.upKeySec.isDown || this.joystick.cursors.up) && this.players[p].vy > -MAXVEL)
-        {   this.players[p].vy += -acc;
-            this.players[p].body.velocity.y = this.players[p].vy;
-        }
-        else if((this.downKeySec.isDown || this.joystick.cursors.down) && this.players[p].vy < MAXVEL)
-        {   this.players[p].vy += acc;
-            this.players[p].body.velocity.y = this.players[p].vy;
-        }
-        else if(this.players[p].vy > 0)
-        {   this.players[p].vy += -acc;
-            this.players[p].body.velocity.y = this.players[p].vy;
-        }
-        else if(this.players[p].vy < 0)
-        {   this.players[p].vy += acc;
-            this.players[p].body.velocity.y = this.players[p].vy;
-        }
-        
+        try{
 
-        if((this.leftKeySec.isDown || this.joystick.cursors.left) && this.players[p].vx > -MAXVEL)
-        {   this.players[p].vx += -acc;
-            this.players[p].body.velocity.x = this.players[p].vx;
-        }
-        else if((this.rigthKeySec.isDown || this.joystick.cursors.right) && this.players[p].vx < MAXVEL)
-        {   this.players[p].vx += acc;
-            this.players[p].body.velocity.x = this.players[p].vx;
-        }
-        else if(this.players[p].vx > 0)
-        {   this.players[p].vx += -acc;
-            this.players[p].body.velocity.x = this.players[p].vx;
-        }
-        else if(this.players[p].vx < 0)
-        {   this.players[p].vx += acc;
-            this.players[p].body.velocity.x = this.players[p].vx;
-        }
-
-
-        if(twoPlayers)
-        {
-            p = "secondPlayer";
-            if(this.upKey.isDown && this.players[p].vy > -MAXVEL)
-            {   this.players[p].vy += -acc;
-                this.players[p].body.velocity.y = this.players[p].vy;
-            }
-            else if(this.downKey.isDown && this.players[p].vy < MAXVEL)
-            {   this.players[p].vy += acc;
-                this.players[p].body.velocity.y = this.players[p].vy;
-            }
-            else if(this.players[p].vy > 0)
-            {   this.players[p].vy += -acc;
-                this.players[p].body.velocity.y = this.players[p].vy;
-            }
-            else if(this.players[p].vy < 0)
-            {   this.players[p].vy += acc;
-                this.players[p].body.velocity.y = this.players[p].vy;
-            }
-            
-
-            if(this.leftKey.isDown && this.players[p].vx > -MAXVEL)
-            {   this.players[p].vx += -acc;
-                this.players[p].body.velocity.x = this.players[p].vx;
-            }
-            else if(this.rigthKey.isDown && this.players[p].vx < MAXVEL)
-            {   this.players[p].vx += acc;
-                this.players[p].body.velocity.x = this.players[p].vx;
-            }
-            else if(this.players[p].vx > 0)
-            {   this.players[p].vx += -acc;
-                this.players[p].body.velocity.x = this.players[p].vx;
-            }
-            else if(this.players[p].vx < 0)
-            {   this.players[p].vx += acc;
-                this.players[p].body.velocity.x = this.players[p].vx;
-            }
-        }
-
-        /*
-        if(!twoPlayers)
-        {
             for(p in this.players)
             {
-                if(this.players[p].team == VISITANT)
+                if(p != "principalPlayer")
                 {
                     if(this.players[p].up && this.players[p].vy > -MAXVEL)
                     {   this.players[p].vy += -acc;
@@ -233,8 +170,51 @@ var multiplayerState = {
                     }
                 }
             }
+
+            var p = "principalPlayer";
+            this.players[p].up = (this.upKeySec.isDown || this.joystick.cursors.up);
+            this.players[p].down = (this.downKeySec.isDown || this.joystick.cursors.down);
+            this.players[p].left = (this.leftKeySec.isDown || this.joystick.cursors.left);
+            this.players[p].rigth = (this.rigthKeySec.isDown || this.joystick.cursors.right);
+            if((this.upKeySec.isDown || this.joystick.cursors.up) && this.players[p].vy > -MAXVEL)
+            {   this.players[p].vy += -acc;
+                this.players[p].body.velocity.y = this.players[p].vy;
+                this.players[p].up = 1;
+            }
+            else if((this.downKeySec.isDown || this.joystick.cursors.down) && this.players[p].vy < MAXVEL)
+            {   this.players[p].vy += acc;
+                this.players[p].body.velocity.y = this.players[p].vy;
+                this.players[p].down = 1;
+            }
+            else if(this.players[p].vy > 0)
+            {   this.players[p].vy += -acc;
+                this.players[p].body.velocity.y = this.players[p].vy;
+            }
+            else if(this.players[p].vy < 0)
+            {   this.players[p].vy += acc;
+                this.players[p].body.velocity.y = this.players[p].vy;
+            }
+            
+
+            if((this.leftKeySec.isDown || this.joystick.cursors.left) && this.players[p].vx > -MAXVEL)
+            {   this.players[p].vx += -acc;
+                this.players[p].body.velocity.x = this.players[p].vx;
+            }
+            else if((this.rigthKeySec.isDown || this.joystick.cursors.right) && this.players[p].vx < MAXVEL)
+            {   this.players[p].vx += acc;
+                this.players[p].body.velocity.x = this.players[p].vx;
+            }
+            else if(this.players[p].vx > 0)
+            {   this.players[p].vx += -acc;
+                this.players[p].body.velocity.x = this.players[p].vx;
+            }
+            else if(this.players[p].vx < 0)
+            {   this.players[p].vx += acc;
+                this.players[p].body.velocity.x = this.players[p].vx;
+            }
+            
+        }catch(e){
         }
-        */
         
     },
     kickBall: function(ball, player) {
@@ -370,15 +350,19 @@ var multiplayerState = {
     {
         if(goalLimit <= this.localScore)
         {
-            this.endGame();
+            // this.endGame();
             this.alertMessages.text = "LOCAL ha GANADO!";
-            setTimeout(mostrarMenu, 2500);
+            setTimeout(function(){
+                started = false;
+            }, 2500);
         }
         else if(goalLimit <= this.visitantScore)
         {
-            this.endGame();
+            // this.endGame();
             this.alertMessages.text = "VISITANTE ha GANADO!";
-            setTimeout(mostrarMenu, 2500);
+            setTimeout(function(){
+                started = false;
+            }, 2500);
         }
         else
         {
@@ -440,73 +424,134 @@ var multiplayerState = {
     syncPlayers: function()
     {   // Sincroniza la informacion de todos los jugadores
         var data = {
-            players: [],
+            players: {},
             ball: {
                 x: this.ball.body.x,
-                y: this.ball.body.y
+                y: this.ball.body.y,
+                vx: this.ball.body.velocity.x,
+                vy: this.ball.body.velocity.y
+            },
+            score:{
+                local: this.localScore,
+                visitant: this.visitantScore
             }
         }
         for(p in this.players)
         {   // Recogemos los datos de los jugadores
             var player = this.players[p];
-            data.players[p] = {
+            var peerId = p;
+            if(peerId == "principalPlayer")
+            {
+                peerId = myPeerId;
+            }
+            data.players[peerId] = {
                 x: player.body.x,
                 y: player.body.y,
-                velx: player.body.velocity.x,
-                vely: player.body.velocity.y,
+                vx: player.body.velocity.x,
+                vy: player.body.velocity.y,
+                team: player.team,
+                up: player.up,
+                down: player.down,
+                rigth: player.rigth,
+                left: player.left
             }
         }
-        data.players = this.players;
+        // data.players = this.players;
         for(p in playerPeers)
         {   // Enviamos a cada jugador la informacion actualizada
-            var player = playerPeers[p];
-            player.send(data);
+            playerPeers[p].send(data);
         }
+        //console.log("Actualizacion del servidor enviada..");
     },
     syncMe: function()
     {   // Sincronizo con el jugador servidor mi informacion
-        var player = this.players["principalPlayer"];
-        var data = {
-            x: player.body.x,
-            y: player.body.y,
-            velx: player.body.velocity.x,
-            vely: player.body.velocity.y,
-        }
-        // Envio mi informacion actualizada al servidor
-        peer.myConnection.send(player);
+        //var player = this.players["principalPlayer"];
+        try{
+            var data = {
+                /* x: player.body.x,
+                y: player.body.y,
+                velx: player.body.velocity.x,
+                vely: player.body.velocity.y, */
+                up: multiplayerState.players["principalPlayer"].up,
+                down: multiplayerState.players["principalPlayer"].down,
+                rigth: multiplayerState.players["principalPlayer"].rigth,
+                left: multiplayerState.players["principalPlayer"].left
+            }
+            // Envio mi informacion actualizada al servidor
+            peer.myConnection.send(data);
+        }catch(e){console.log("ERROR SYNCME");}
     },
     connectToGame: function()
     {   // Funcion que se conecta a un juego (un peer id)
-        var id = prompt("ID de la partida a conectarse (dejalo en blanco si eres el creador de la partida):", "");
+        var id = gameId;
+        if(!id)
+            id = prompt("ID de la partida a conectarse (dejalo en blanco si eres el creador de la partida):", "");
+        
         if(id != "")
         {   // Si me da un id, me intento conectar a el
             // sino, es el creador de la partida
             peer.myConnection = peer.connect(id);
             peer.myConnection.on('open', function(){
                 var team = prompt("Conectado! \n Elige:\n 1. Visitante \n 2.Local", "");
-                if(team == "1")
+                var sprite = "";
+                if(team == "2")
                 {
                     team = LOCAL;
+                    sprite = "localPlayer";
                 }
                 else
                 {
                     team = VISITANT;
+                    sprite = "visitantPlayer";
                 }
-                this.createPlayer("localPlayer", "principalPlayer", team);
-                //peer.myConnection.send({team:team});
+                multiplayerState.players["principalPlayer"].kill();
+                multiplayerState.createPlayer(sprite, "principalPlayer", team);
+                peer.myConnection.send({chooseTeam:team});
+
+                // Como no soy el servidor, indico cuando envio informacion al servidor,
+                // enviare informacion cuando genere un evento (al moverme, pulsar tecla)
+                /* multiplayerState.upKeySec.processKeyDown = multiplayerState.syncMe;
+                multiplayerState.downKeySec.processKeyDown = multiplayerState.syncMe;
+                multiplayerState.leftKeySec.processKeyDown = multiplayerState.syncMe;
+                multiplayerState.rigthKeySec.processKeyDown = multiplayerState.syncMe;
+                multiplayerState.upKeySec.processKeyUp = multiplayerState.syncMe;
+                multiplayerState.downKeySec.processKeyUp = multiplayerState.syncMe;
+                multiplayerState.leftKeySec.processKeyUp = multiplayerState.syncMe;
+                multiplayerState.rigthKeySec.processKeyUp = multiplayerState.syncMe;
+                */
             });
             peer.myConnection.on('data', function(d){
-                console.log(d);
-                this.players = d.players;
-                this.ball.body.x = d.ball.x;
-                this.ball.body.y = d.ball.y;
+                // Recibo los datos de los jugadores actualizados del "jugador servidor"
+                //console.log("Actualizacion del servidor recibida..");
+                if(d.disconnected)
+                {
+                    multiplayerState.players[d.disconnected].kill();
+                }
+                else if(d.goles)
+                {
+                    limiteGoles = d.goles;
+                }
+                else
+                {
+                    multiplayerState.ball.body.x = d.ball.x;
+                    multiplayerState.ball.body.y = d.ball.y;
+                    multiplayerState.ball.body.velocity.x = d.ball.vx;
+                    multiplayerState.ball.body.velocity.y = d.ball.vy;
+                    multiplayerState.localScore = d.score.local;
+                    multiplayerState.visitantScore = d.score.visitant;
+                    multiplayerState.updateSyncData(d.players);
+                }
+            });
+            peer.myConnection.on('close', function(d){
+                alert("Servidor desconectado!");
+                mostrarMenu();
             });
         }
         else
-        {
-            var team = prompt("Conectado! \n Elige:\n 1. Visitante \n 2.Local", "");
+        {   /* Partida creada por mi, soy el servidor
+            var team = prompt("Partida Creada! \n Elige:\n 1. Visitante \n 2.Local", "");
             var sprite = "";
-            if(team == "1")
+            if(team == "2")
             {
                 team = LOCAL;
                 sprite = "localPlayer";
@@ -516,8 +561,45 @@ var multiplayerState = {
                 team = VISITANT;
                 sprite = "visitantPlayer";
             }
-            this.createPlayer(sprite, "principalPlayer", team);
+            this.createPlayer(sprite, "principalPlayer", team);*/
+            this.createPlayer("localPlayer", "principalPlayer", LOCAL);
             this.imServer = true;
+        }
+    },
+    updateSyncData: function(updatedPlayers)
+    {   // En esta funcion actualizo los datos del jugador con los
+        // datos recibidos del servidor
+        for(p in updatedPlayers)
+        {   
+            if(p == myPeerId)
+            {   // Son datos mios actualizados
+                console.log("MIS DATOS!!");
+                this.players["principalPlayer"].body.x = updatedPlayers[p].x;
+                this.players["principalPlayer"].body.y = updatedPlayers[p].y;
+                this.players["principalPlayer"].body.velocity.x = updatedPlayers[p].vx;
+                this.players["principalPlayer"].body.velocity.y = updatedPlayers[p].vy;
+                
+                /* this.players["principalPlayer"].up = updatedPlayers[p].up;
+                this.players["principalPlayer"].down = updatedPlayers[p].down;
+                this.players["principalPlayer"].rigth = updatedPlayers[p].rigth;
+                this.players["principalPlayer"].left = updatedPlayers[p].left; */
+            }
+            else if(!(p in this.players))
+            {
+                this.createPlayer(updatedPlayers[p].team+"Player", p, updatedPlayers[p].team);
+            }
+            
+            if(p in this.players)
+            {   // Son datos de los otros jugadores
+                this.players[p].body.x = updatedPlayers[p].x;
+                this.players[p].body.y = updatedPlayers[p].y;
+                this.players[p].body.velocity.x = updatedPlayers[p].vx;
+                this.players[p].body.velocity.y = updatedPlayers[p].vy;
+                this.players[p].up = updatedPlayers[p].up;
+                this.players[p].down = updatedPlayers[p].down;
+                this.players[p].rigth = updatedPlayers[p].rigth;
+                this.players[p].left = updatedPlayers[p].left;
+            }
         }
     }
 };
@@ -529,18 +611,85 @@ function manejoPeerJS()
 {
     peer.on('open', function(peerid) {
         myPeerId = peerid;
-        alert("Tu PEERID: " + myPeerId);
+        document.getElementById("debug").innerHTML = "Tu Identificador de partida: <b>" + myPeerId + "</b>";
+        multiplayerState.createPlayer("localPlayer", "principalPlayer", LOCAL);
     });
     
     peer.on('connection', function(data) {
-        // cuando un jugador se conecta a mi partida
+        // cuando un jugador se conecta a mi partida guardo sus datos
         //console.log("ALGUIEN CONECTO!");
         //console.log(data);
-        playerPeers[data.id] = data;
-        playerPeers[data.id].on('data', function(d){
-            multiplayerState.players[data.id] = d;
+        playerPeers[data.peer] = data;
+        playerPeers[data.peer].send({goles:limiteGoles});
+        playerPeers[data.peer].on('data', function(d){
+            // cuando un jugador me envia un cambio (se pulsa un boton para moverse)
+            // lo resgistro
+            //console.log("ID actualizando: " + data.id);
+            if(data.peer in multiplayerState.players)
+            {
+                //console.log("Actualizando jugador..")
+                /*multiplayerState.players[data.peer].body.x = d.x;
+                multiplayerState.players[data.peer].body.y = d.y;
+                multiplayerState.players[data.peer].velocity.x = d.vx;
+                multiplayerState.players[data.peer].velocity.y = d.vy;*/
+
+                multiplayerState.players[data.peer].up = d.up;
+                multiplayerState.players[data.peer].down = d.down;
+                multiplayerState.players[data.peer].left = d.left;
+                multiplayerState.players[data.peer].rigth = d.rigth;
+            }
+            else if(d.chooseTeam)
+            {   // si lo que envia es el equipo en el que quiere estar (al principio de la conexion)
+                // creo el jugador
+                //console.log("Creando jugador..");
+                var team = d.chooseTeam;
+                if(team == LOCAL)
+                {
+                    sprite = "localPlayer";
+                }
+                else
+                {
+                    sprite = "visitantPlayer";
+                }
+                multiplayerState.createPlayer(sprite, data.peer, team);
+                if(!started)
+                {   // Cuando el partido esta empezado dejo que jueguen
+                    multiplayerState.reallocatePlayers();
+                }
+            }
+        });
+        playerPeers[data.peer].on('close', function(d){
+            var newPlayers = {};
+            var peer = this.peer;
+            multiplayerState.players[peer].kill();
+            var data = {
+                disconnected: peer
+            };
+            for(p in playerPeers)
+            {   // Enviamos a cada jugador la informacion de que uno de ellos se desconecto
+                if(p != peer)
+                {
+                    newPlayers[p]
+                    playerPeers[p].send(data);
+                }
+            }
         });
     });    
+}
+
+function startMultiPlayer()
+{
+    goalLimit = limiteGoles;
+    game.state.start('multiplayer');
+}
+
+function startMatch()
+{
+    document.getElementById("multiplayerStartBtn").style = "display:;";
+    started = true;
+    multiplayerState.localScore = 0;
+    multiplayerState.visitantScore = 0;
+    multiplayerState.reallocatePlayers();
 }
 
 
