@@ -318,26 +318,28 @@ var multiplayerState = {
     },
     reallocatePlayers: function()
     {   // Colocar los jugadores en "linea", no en el mismo sitio
-        var numPlayers = 0;
-        for(p in this.players)
-        {
-            numPlayers++;
-        }
-        var space = GAMESIZE[1] / numPlayers;
-        var l = 1, v = 1;
-        for(p in this.players)
-        {
-            if(this.players[p].team == LOCAL)
-            {  
-                this.players[p].reset((GAMESIZE[0]/4), space*l);
-                l = (l+1) % numPlayers;
-            }
-            else
+        try{
+            var numPlayers = 0;
+            for(p in this.players)
             {
-                this.players[p].reset((GAMESIZE[0]/4)*3, space*v);
-                v = (v+1) % numPlayers;
+                numPlayers++;
             }
-        }
+            var space = GAMESIZE[1] / numPlayers;
+            var l = 1, v = 1;
+            for(p in this.players)
+            {
+                if(this.players[p].team == LOCAL)
+                {  
+                    this.players[p].reset((GAMESIZE[0]/4), space*l);
+                    l = (l+1) % numPlayers;
+                }
+                else
+                {
+                    this.players[p].reset((GAMESIZE[0]/4)*3, space*v);
+                    v = (v+1) % numPlayers;
+                }
+            }
+        }catch(e){}
     },
     alertGoal: function()
     {
@@ -423,45 +425,47 @@ var multiplayerState = {
     },
     syncPlayers: function()
     {   // Sincroniza la informacion de todos los jugadores
-        var data = {
-            players: {},
-            ball: {
-                x: this.ball.body.x,
-                y: this.ball.body.y,
-                vx: this.ball.body.velocity.x,
-                vy: this.ball.body.velocity.y
-            },
-            score:{
-                local: this.localScore,
-                visitant: this.visitantScore
+        try{
+            var data = {
+                players: {},
+                ball: {
+                    x: this.ball.body.x,
+                    y: this.ball.body.y,
+                    vx: this.ball.body.velocity.x,
+                    vy: this.ball.body.velocity.y
+                },
+                score:{
+                    local: this.localScore,
+                    visitant: this.visitantScore
+                }
             }
-        }
-        for(p in this.players)
-        {   // Recogemos los datos de los jugadores
-            var player = this.players[p];
-            var peerId = p;
-            if(peerId == "principalPlayer")
-            {
-                peerId = myPeerId;
+            for(p in this.players)
+            {   // Recogemos los datos de los jugadores
+                var player = this.players[p];
+                var peerId = p;
+                if(peerId == "principalPlayer")
+                {
+                    peerId = myPeerId;
+                }
+                data.players[peerId] = {
+                    x: player.body.x,
+                    y: player.body.y,
+                    vx: player.body.velocity.x,
+                    vy: player.body.velocity.y,
+                    team: player.team,
+                    up: player.up,
+                    down: player.down,
+                    rigth: player.rigth,
+                    left: player.left
+                }
             }
-            data.players[peerId] = {
-                x: player.body.x,
-                y: player.body.y,
-                vx: player.body.velocity.x,
-                vy: player.body.velocity.y,
-                team: player.team,
-                up: player.up,
-                down: player.down,
-                rigth: player.rigth,
-                left: player.left
+            // data.players = this.players;
+            for(p in playerPeers)
+            {   // Enviamos a cada jugador la informacion actualizada
+                playerPeers[p].send(data);
             }
-        }
-        // data.players = this.players;
-        for(p in playerPeers)
-        {   // Enviamos a cada jugador la informacion actualizada
-            playerPeers[p].send(data);
-        }
-        //console.log("Actualizacion del servidor enviada..");
+            //console.log("Actualizacion del servidor enviada..");
+        }catch(e){}
     },
     syncMe: function()
     {   // Sincronizo con el jugador servidor mi informacion
@@ -529,7 +533,15 @@ var multiplayerState = {
                 }
                 else if(d.goles)
                 {
-                    limiteGoles = d.goles;
+                    goalLimit = d.goles;
+                }
+                else if(d.startMatch)
+                {
+                    multiplayerState.alertMessages.text = "El partido empieza en 3 segundos!";
+                    setTimeout(function(){
+                        // Empezamos en 3 segundos
+                        multiplayerState.alertMessages.text = "";
+                    }, 2600);
                 }
                 else
                 {
@@ -611,7 +623,11 @@ function manejoPeerJS()
 {
     peer.on('open', function(peerid) {
         myPeerId = peerid;
-        document.getElementById("debug").innerHTML = "Tu Identificador de partida: <b>" + myPeerId + "</b>";
+        if(multiplayerState.imServer)
+        {
+            document.getElementById("debug").innerHTML = "Tu Identificador de partida: <b>" + myPeerId + "</b>";
+            document.getElementById("multiplayerStartBtn").style.display = "";
+        }
         multiplayerState.createPlayer("localPlayer", "principalPlayer", LOCAL);
     });
     
@@ -620,7 +636,6 @@ function manejoPeerJS()
         //console.log("ALGUIEN CONECTO!");
         //console.log(data);
         playerPeers[data.peer] = data;
-        playerPeers[data.peer].send({goles:limiteGoles});
         playerPeers[data.peer].on('data', function(d){
             // cuando un jugador me envia un cambio (se pulsa un boton para moverse)
             // lo resgistro
@@ -656,6 +671,7 @@ function manejoPeerJS()
                 {   // Cuando el partido esta empezado dejo que jueguen
                     multiplayerState.reallocatePlayers();
                 }
+                this.send({goles:limiteGoles});
             }
         });
         playerPeers[data.peer].on('close', function(d){
@@ -667,12 +683,15 @@ function manejoPeerJS()
             };
             for(p in playerPeers)
             {   // Enviamos a cada jugador la informacion de que uno de ellos se desconecto
+                // y actualizamos el array de jugadores
                 if(p != peer)
                 {
-                    newPlayers[p]
+                    newPlayers[p] = multiplayerState.players[p];
                     playerPeers[p].send(data);
                 }
             }
+            newPlayers["principalPlayer"] = multiplayerState.players["principalPlayer"];
+            multiplayerState.players = newPlayers;
         });
     });    
 }
@@ -685,11 +704,24 @@ function startMultiPlayer()
 
 function startMatch()
 {
-    document.getElementById("multiplayerStartBtn").style = "display:;";
-    started = true;
-    multiplayerState.localScore = 0;
-    multiplayerState.visitantScore = 0;
-    multiplayerState.reallocatePlayers();
+    var data = {startMatch:1};
+    for(p in playerPeers)
+    {   // Enviamos a cada jugador la alerta de que va a empezar el partido!
+        if(p != peer)
+        {
+            playerPeers[p].send(data);
+        }
+    }
+    multiplayerState.alertMessages.text = "El partido empieza en 3 segundos!";
+    setTimeout(function(){
+        // Empezamos en 3 segundos
+        started = true;
+        multiplayerState.localScore = 0;
+        multiplayerState.visitantScore = 0;
+        multiplayerState.reallocatePlayers();
+        multiplayerState.ball.reset(GAMESIZE[0]/2, GAMESIZE[1]/2);
+        multiplayerState.alertMessages.text = "";
+    }, 3000);
 }
 
 

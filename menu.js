@@ -18,6 +18,7 @@ var menuState = {
         game.load.image('back_field', 'assets/fondo_menu.png');
         game.load.image('boton1Player', 'assets/1jugador.png');
         game.load.image('boton2Players', 'assets/2jugadores.png');
+        game.load.image('botonMultiplayer', 'assets/multijugador.png');
         game.load.image('mas', 'assets/mas.png');
         game.load.image('menos', 'assets/menos.png');
 
@@ -55,6 +56,8 @@ var menuState = {
         this.limiteGolesMas.scale.x = 0.12; this.limiteGolesMas.scale.y = 0.12;
         this.limiteGolesMenos = this.game.add.button(385, 405, 'menos', quitarGoles);
         this.limiteGolesMenos.scale.x = 0.12; this.limiteGolesMenos.scale.y = 0.12;
+
+        this.startMultiplayer = this.game.add.button(350, 450, 'botonMultiplayer', startMultiPlayer);
     },
 
     update: function() {
