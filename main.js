@@ -553,11 +553,8 @@ var mainState = {
             var inCorner = this.ballInCorner();
             if(inCorner)
             {
-<<<<<<< HEAD
                 this.players[nearestPlayer].rigth = 0;
-=======
                 this.goToPoint(nearestPlayer, GAMESIZE[0]/2, GAMESIZE[1]/2);
->>>>>>> origin/master
             }
             else
             {
