@@ -109,12 +109,14 @@ var mainState = {
         }
         this.IAUpdateCounter++;
 
+        /*
         if(this.NeuralNetSaveCounter >= NEURAL_DATA_FRAMES_SAVE)
         {
             this.NeuralNetSaveCounter = 0;
             this.saveNeuralNetworkData();
         }
         this.NeuralNetSaveCounter++;
+        */
 
         this.labelScore.text = this.localScore+"-"+this.visitantScore;
 
@@ -123,6 +125,21 @@ var mainState = {
 
         this.addAcceleration();
         this.sacarPelotaCorner();
+        
+        // IA Adaptativa segun el resutado
+        if(this.localScore < this.visitantScore)
+        {
+            IA_FRAMES_UPDATE = 20;
+        }
+        else if(this.localScore == this.visitantScore)
+        {
+            IA_FRAMES_UPDATE = 7;
+        }
+        else
+        {
+            IA_FRAMES_UPDATE = 1;
+        }
+        //document.getElementById("debug").innerHTML = IA_FRAMES_UPDATE;
 
     },
     endGame: function() {
@@ -536,7 +553,11 @@ var mainState = {
             var inCorner = this.ballInCorner();
             if(inCorner)
             {
+<<<<<<< HEAD
                 this.players[nearestPlayer].rigth = 0;
+=======
+                this.goToPoint(nearestPlayer, GAMESIZE[0]/2, GAMESIZE[1]/2);
+>>>>>>> origin/master
             }
             else
             {

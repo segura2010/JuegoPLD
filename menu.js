@@ -1,7 +1,7 @@
 // Menu Game State
 
-var jugadoresIA = 0;
-var limiteGoles = 0;
+var jugadoresIA = 1;
+var limiteGoles = 1;
 
 var menuState = {
     preload: function() {
@@ -18,6 +18,7 @@ var menuState = {
         game.load.image('back_field', 'assets/fondo_menu.png');
         game.load.image('boton1Player', 'assets/1jugador.png');
         game.load.image('boton2Players', 'assets/2jugadores.png');
+        game.load.image('botonMultiplayer', 'assets/multijugador.png');
         game.load.image('mas', 'assets/mas.png');
         game.load.image('menos', 'assets/menos.png');
 
@@ -55,6 +56,8 @@ var menuState = {
         this.limiteGolesMas.scale.x = 0.12; this.limiteGolesMas.scale.y = 0.12;
         this.limiteGolesMenos = this.game.add.button(385, 405, 'menos', quitarGoles);
         this.limiteGolesMenos.scale.x = 0.12; this.limiteGolesMenos.scale.y = 0.12;
+
+        this.startMultiplayer = this.game.add.button(350, 450, 'botonMultiplayer', startMultiPlayer);
     },
 
     update: function() {
@@ -63,7 +66,6 @@ var menuState = {
     }
 };
 game.state.add('menu', menuState);
-game.state.start('menu');
 
 function anadirIA()
 {
@@ -75,7 +77,7 @@ function anadirIA()
 
 function quitarIA()
 {
-    if(jugadoresIA > 0)
+    if(jugadoresIA > 1)
     {
         jugadoresIA--;
     }
@@ -91,7 +93,7 @@ function anadirGoles()
 
 function quitarGoles()
 {
-    if(limiteGoles > 0)
+    if(limiteGoles > 1)
     {
         limiteGoles--;
     }
@@ -114,5 +116,11 @@ function startTwoPlayersGame()
 
 function mostrarMenu()
 {
+    /* var params = parseUrl( document.URL.split('?')[1] );
+    if(params.id)
+    {
+        gameId = params.id;
+        startMultiPlayer();
+    }*/
     game.state.start('menu'); 
 }
