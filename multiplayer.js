@@ -345,7 +345,7 @@ var multiplayerState = {
     {
         this.alertMessages.text = "GOOOOOL!";
         setTimeout(function(){
-            mainState.alertMessages.text = "";
+            multiplayerState.alertMessages.text = "";
         }, 1000);
     },
     checkIfSomeoneWins: function()
